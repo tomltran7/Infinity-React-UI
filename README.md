@@ -17,5 +17,4 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## Loading the project
 1. Run NPM install in the project directory
-2. Run NPM install lucide-react
-3. Run NPM install tailwindcss@3 postcss autoprefixer
+2. Run NPM install react react-dom recharts framer-motion lucide-react tailwindcss@3 postcss autoprefixer
