@@ -1,9 +1,12 @@
 {
-  "name": "github-look-alike",
+  "name": "infinity-react-ui",
+  "homepage": "https://github.com/tomltran7.github.io/Infinity-React-UI",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -12,7 +15,8 @@
   "dependencies": {
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "recharts": "^3.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
