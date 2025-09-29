@@ -691,6 +691,23 @@ const InfinityReactUI = () => {
         ['-', '-', 'No Rule Matched']
       ],
       testCases: [],
+      testCases: [
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', 'TRUE'],
+          expected: 'Bypass UM due to Hospital based physician and apply member benefits',
+          description: 'Should bypass UM for hospital-based physician when condition is TRUE.'
+        },
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', 'FALSE'],
+          expected: 'Proceed to Line Level Bypass Check',
+          description: 'Should proceed to line level bypass check when condition is FALSE.'
+        },
+        {
+          inputs: ['-', '-'],
+          expected: 'No Rule Matched',
+          description: 'Should return No Rule Matched for default case.'
+        }
+      ],
       changeLog: []
     },
     {
