@@ -612,7 +612,23 @@ const InfinityReactUI = () => {
         ['Y', 'TRUE', 'Proceed to Claim Level Bypass Check'],
         ['-', '-', 'No action specified'],
       ],
-      testCases: [],
+      testCases: [
+        {
+          inputs: ['Y', 'TRUE'],
+          expected: 'Proceed to Claim Level Bypass Check',
+          description: 'Should proceed to Claim Level Bypass Check when Authorization Indicator is Y and UM Core Edit is TRUE'
+        },
+        {
+          inputs: ['-', '-'],
+          expected: 'No action specified',
+          description: 'Should return No action specified when Authorization Indicator and UM Core Edit are not set'
+        },
+        {
+          inputs: ['N', 'FALSE'],
+          expected: 'No action specified',
+          description: 'Should return No action specified when Authorization Indicator is N and UM Core Edit is FALSE'
+        }
+      ],
       changeLog: [],
     },
     {
