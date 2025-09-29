@@ -690,7 +690,6 @@ const InfinityReactUI = () => {
         ['Proceed to Claim Level Bypass Check', 'FALSE', 'Proceed to Line Level Bypass Check'],
         ['-', '-', 'No Rule Matched']
       ],
-      testCases: [],
       testCases: [
         {
           inputs: ['Proceed to Claim Level Bypass Check', 'TRUE'],
@@ -728,7 +727,33 @@ const InfinityReactUI = () => {
         ['Proceed to Claim Level Bypass Check', '-', '-','-','No recommendation from Infinity'],
         ['-','-','-', '-', 'No Rule Matched']
       ],
-      testCases: [],
+      testCases: [
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', 'TRUE', '-', '-',],
+          expected: 'Bypass UM, per modifier 26 and apply member benefits',
+          description: 'Should bypass UM for modifier 26 when condition is TRUE.'
+        },
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', '-', 'TRUE', '-',],
+          expected: 'Bypass UM, per prior auth pass program and apply member benefits',
+          description: 'Should bypass UM for prior auth pass program when second condition is TRUE.'
+        },
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', '-', '-', 'TRUE',],
+          expected: 'Bypass UM, per prior auth pass program and apply member benefits',
+          description: 'Should bypass UM for possible prior auth pass program when third condition is TRUE.'
+        },
+        {
+          inputs: ['Proceed to Claim Level Bypass Check', '-', '-', '-',],
+          expected: 'No recommendation from Infinity',
+          description: 'Should return No recommendation from Infinity for unmatched conditions.'
+        },
+        {
+          inputs: ['-', '-', '-', '-',],
+          expected: 'No Rule Matched',
+          description: 'Should return No Rule Matched for default case.'
+        }
+      ],
       changeLog: []
     },
     {
