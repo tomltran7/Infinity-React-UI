@@ -599,38 +599,6 @@ const InfinityReactUI = () => {
   const [editorMode, setEditorMode] = useState('table');
   // Models (Decision Tables) with repo property
   const [models, setModels] = useState([
-    // Mock change for Authorization Indicator Check
-    {
-      id: 100,
-      title: 'Authorization Indicator Check',
-      repo: 'Authorization_CSBD_DMN',
-      columns: [
-        { name: 'Authorization Indicator', type: 'String', condition: 'Equals' },
-        { name: 'UM Core Edit', type: 'Boolean', condition: 'Equals' },
-        { name: 'Result', type: 'String', condition: 'Equals' }
-      ],
-      rows: [
-        ['Y', 'TRUE', 'Proceed to Claim Level Bypass Check'],
-        ['-', '-', 'No action specified'],
-      ],
-      testCases: [],
-      changeLog: [
-        {
-          timestamp: '2025-09-29T09:00:00Z',
-          title: 'Change: Updated UM Core Edit for Authorization Indicator',
-          columns: [
-            { name: 'Authorization Indicator', type: 'String', condition: 'Equals' },
-            { name: 'UM Core Edit', type: 'Boolean', condition: 'Equals' },
-            { name: 'Result', type: 'String', condition: 'Equals' }
-          ],
-          rows: [
-            ['Y', 'TRUE', 'Proceed to Claim Level Bypass Check'],
-            ['-', '-', 'No action specified'],
-          ],
-          testCases: []
-        }
-      ]
-    },
     {
       id: 1,
       title: 'Authorization Indicator Check',
