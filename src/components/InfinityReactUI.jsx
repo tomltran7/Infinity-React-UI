@@ -629,7 +629,52 @@ const InfinityReactUI = () => {
           description: 'Should return No action specified when Authorization Indicator is N and UM Core Edit is FALSE'
         }
       ],
-      changeLog: [],
+      changeLog: [
+        {
+          timestamp: '2025-09-28T10:00:00Z',
+          title: 'Initial creation of Authorization Indicator Check',
+          columns: [
+            { name: 'Authorization Indicator', type: 'String', condition: 'Equals' },
+            { name: 'UM Core Edit', type: 'Boolean', condition: 'Equals' },
+            { name: 'Result', type: 'String', condition: 'Equals' }
+          ],
+          rows: [
+            ['Y', 'TRUE', 'Proceed to Claim Level Bypass Check'],
+            ['-', '-', 'No action specified'],
+          ],
+          testCases: []
+        },
+        {
+          timestamp: '2025-09-29T09:00:00Z',
+          title: 'Added functional test cases',
+          columns: [
+            { name: 'Authorization Indicator', type: 'String', condition: 'Equals' },
+            { name: 'UM Core Edit', type: 'Boolean', condition: 'Equals' },
+            { name: 'Result', type: 'String', condition: 'Equals' }
+          ],
+          rows: [
+            ['Y', 'TRUE', 'Proceed to Claim Level Bypass Check'],
+            ['-', '-', 'No action specified'],
+          ],
+          testCases: [
+            {
+              inputs: ['Y', 'TRUE'],
+              expected: 'Proceed to Claim Level Bypass Check',
+              description: 'Should proceed to Claim Level Bypass Check when Authorization Indicator is Y and UM Core Edit is TRUE'
+            },
+            {
+              inputs: ['-', '-'],
+              expected: 'No action specified',
+              description: 'Should return No action specified when Authorization Indicator and UM Core Edit are not set'
+            },
+            {
+              inputs: ['N', 'FALSE'],
+              expected: 'No action specified',
+              description: 'Should return No action specified when Authorization Indicator is N and UM Core Edit is FALSE'
+            }
+          ]
+        }
+      ],
     },
     {
       id: 2,
