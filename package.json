@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "lucide-react": "^0.544.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^6.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.2.1"

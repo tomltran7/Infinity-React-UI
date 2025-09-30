@@ -11,48 +11,20 @@ const CopilotAssistant = ({ onSuggestion }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  const mockResponses = [
-    {
-      trigger: ['age', 'validation', 'person'],
-      response: "Here's a sample DRL rule for age validation:\n\nrule \"Age Validation\"\nwhen\n $person : Person(age >= 18)\nthen\n $person.setStatus(\"Adult\");\n System.out.println(\"Person is an adult\");\nend"
-    },
-    {
-      trigger: ['income', 'check', 'salary'],
-      response: "For income validation, you can use:\n\nrule \"Income Check\"\nwhen\n $person : Person(income > 50000)\nthen\n $person.setEligible(true);\n System.out.println(\"Person is eligible\");\nend"
-    },
-    {
-      trigger: ['dmn', 'decision', 'table'],
-      response: "For DMN decision tables, consider these best practices:\n1. Use clear, descriptive column headers\n2. Order rules from most specific to least specific\n3. Use UNIQUE hit policy when only one rule should fire\n4. Test all possible input combinations"
-    },
-    {
-      trigger: ['condition', 'expression'],
-      response: "Expressions in DMN support:\n- Comparison operators: >, <, >=, <=, =, !=\n- Range expressions: [18..65], (0..100)\n- List expressions: \"A\", \"B\", \"C\"\n- Boolean logic: and, or, not"
-    },
-    {
-      trigger: ['conflict', 'overlap', 'error'],
-      response: "Rule conflicts can occur when:\n1. Multiple rules have identical conditions\n2. Rules have overlapping ranges\n3. Rule ordering creates unreachable conditions\n\nUse the conflict detector to identify and resolve these issues."
-    },
-    {
-      trigger: ['policy', 'priority'],
-      response: "policy controls rule execution order:\n\nrule \"High Priority Rule\"\npolicy 100\nwhen\n // conditions\nthen\n // actions\nend\n\nHigher numbers execute first. Default policy is 0."
-    }
-  ];
 
-  const getResponse = (userInput) => {
-    const input = userInput.toLowerCase();
-    for (const mockResponse of mockResponses) {
-      if (mockResponse.trigger.some(t => input.includes(t))) {
-        return mockResponse.response;
-      }
+  // Call your backend API to get OpenAI response
+  const getOpenAIResponse = async (userInput) => {
+    try {
+      const res = await fetch('/api/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userInput })
+      });
+      const data = await res.json();
+      return data.reply || 'Sorry, I could not get a response.';
+    } catch (err) {
+      return 'Error contacting assistant. Please try again.';
     }
-    // Default responses
-    const defaultResponses = [
-      'I can help you with DRL rules and DMN decision tables. What specific topic would you like to explore?',
-      'Try asking about rule syntax, decision table design, or conflict resolution.',
-      'Would you like me to show you an example of a specific rule pattern?',
-      'I can explain expressions, policy, or help debug your rules.'
-    ];
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
   const handleSendMessage = async () => {
@@ -67,11 +39,10 @@ const CopilotAssistant = ({ onSuggestion }) => {
     const currentInput = input;
     setInput('');
     setIsTyping(true);
-    setTimeout(() => {
-      const response = getResponse(currentInput);
-      setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
-      setIsTyping(false);
-    }, 1500);
+    // Call OpenAI backend
+    const response = await getOpenAIResponse(currentInput);
+    setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
+    setIsTyping(false);
   };
 
   const clearConversation = () => {
@@ -150,7 +121,7 @@ const CopilotAssistant = ({ onSuggestion }) => {
           </button>
         </div>
         <div className="text-xs text-gray-500 mt-1">
-          Mock Assistant • {messages.filter(m => m.type === 'user').length} messages sent
+          Powered by OpenAI • {messages.filter(m => m.type === 'user').length} messages sent
         </div>
       </div>
     </div>
