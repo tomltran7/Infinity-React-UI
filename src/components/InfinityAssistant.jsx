@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, Send } from 'lucide-react';
 
-const CopilotAssistant = ({ onSuggestion }) => {
+const InfinityAssistant = ({ onSuggestion }) => {
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
@@ -39,7 +39,7 @@ const CopilotAssistant = ({ onSuggestion }) => {
     const currentInput = input;
     setInput('');
     setIsTyping(true);
-    // Call OpenAI backend
+  
     const response = await getOpenAIResponse(currentInput);
     setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
     setIsTyping(false);
@@ -128,4 +128,4 @@ const CopilotAssistant = ({ onSuggestion }) => {
   );
 };
 
-export default CopilotAssistant;
+export default InfinityAssistant;

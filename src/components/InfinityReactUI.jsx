@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PeerReview from './PeerReview';
 import Reporting from './Reporting';
-import CopilotAssistant from './CopilotAssistant';
+import InfinityAssistant from './InfinityAssistant';
 
 // Stub Decision Table IDE
 const DATATYPES = ['String', 'Number', 'Boolean', 'Date'];
@@ -572,12 +572,24 @@ import {
 } from 'lucide-react';
 
 const InfinityReactUI = () => {
-  // ...existing code...
+  // --- State Persistence: Load from localStorage on mount ---
+  const LOCAL_STORAGE_KEY = 'infinityReactUIState';
+  // Try to load saved state
+  const savedState = (() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // --- Main state ---
   const [activeTab, setActiveTab] = useState('changes');
-  const [selectedRepo, setSelectedRepo] = useState('Authorization_CSBD_DMN');
+  const [selectedRepo, setSelectedRepo] = useState(savedState?.selectedRepo || 'Authorization_CSBD_DMN');
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = useState('');
-  const [repoList, setRepoList] = useState([
+  const [repoList, setRepoList] = useState(savedState?.repoList || [
     'Authorization_CSBD_DMN',
     'Authorization_GBD_DMN',
     'Deny',
@@ -596,9 +608,9 @@ const InfinityReactUI = () => {
   const [commitMessage, setCommitMessage] = useState('');
   const [commitDescription, setCommitDescription] = useState('');
   // Editor mode: 'table' for Decision Table IDE, 'dmn' for DMN IDE
-  const [editorMode, setEditorMode] = useState('table');
+  const [editorMode, setEditorMode] = useState(savedState?.editorMode || 'table');
   // Models (Decision Tables) with repo property
-  const [models, setModels] = useState([
+  const [models, setModels] = useState(savedState?.models || [
     {
       id: 1,
       title: 'Authorization Indicator Check',
@@ -779,7 +791,7 @@ const InfinityReactUI = () => {
     }
   ]);
   // Change log for each model
-  const [activeModelIdx, setActiveModelIdx] = useState(0);
+  const [activeModelIdx, setActiveModelIdx] = useState(savedState?.activeModelIdx || 0);
   // Only show models for selected repo in editor
   const modelsForRepo = models.filter(m => m.repo === selectedRepo);
   // When repo changes, reset activeModelIdx to 0 if needed
@@ -835,7 +847,28 @@ const InfinityReactUI = () => {
   };
 
   // Page state
-  const [activePage, setActivePage] = useState('home'); // 'home', 'peerReview', 'reporting'
+  const [activePage, setActivePage] = useState(savedState?.activePage || 'home'); // 'home', 'peerReview', 'reporting'
+  // --- Save state to localStorage on relevant changes ---
+  useEffect(() => {
+    const stateToSave = {
+      models,
+      selectedRepo,
+      activeModelIdx,
+      activeTab,
+      activePage,
+      editorMode,
+      repoList
+    };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch {}
+  }, [models, selectedRepo, activeModelIdx, activeTab, activePage, editorMode, repoList]);
+
+  // --- Clear saved state handler ---
+  const handleClearSavedState = () => {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    window.location.reload();
+  };
 
   // Close repo dropdown on outside click
   useEffect(() => {
@@ -874,11 +907,11 @@ const InfinityReactUI = () => {
     }
   };
 
-  const [copilotInput, setCopilotInput] = useState("");
-  const [copilotMessages, setCopilotMessages] = useState([]);
-  const handleCopilotSend = () => {
-    if (!copilotInput.trim()) return;
-    setCopilotMessages([...copilotMessages, { role: 'user', text: copilotInput }]);
+  const [infinityInput, setInfinityInput] = useState("");
+  const [infinityMessages, setInfinityMessages] = useState([]);
+  const handleInfinitySend = () => {
+    if (!infinityInput.trim()) return;
+    setInfinityMessages([...infinityMessages, { role: 'user', text: infinityInput }]);
     // Simulate Copilot response
     setTimeout(() => {
       setCopilotMessages(msgs => [...msgs, { role: 'copilot', text: 'This is a Copilot response to: ' + copilotInput }]);
@@ -1010,6 +1043,13 @@ const InfinityReactUI = () => {
 
           {/* Actions */}
           <div className="p-3 space-y-2">
+            <button
+              className="w-full flex items-center space-x-2 p-2 text-left hover:bg-red-100 rounded-md text-red-700 border border-red-200"
+              onClick={handleClearSavedState}
+            >
+              <X className="w-4 h-4 text-red-500" />
+              <span className="text-sm">Reset App State</span>
+            </button>
             <button
               className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
               onClick={() => setActivePage('home')}
@@ -1288,7 +1328,7 @@ const InfinityReactUI = () => {
                   </div>
                   {/* Copilot Assistant Sidebar */}
                   <div className="w-96 min-w-80 border-l bg-gray-50 flex flex-col p-4">
-                    <CopilotAssistant />
+                    <InfinityAssistant />
                   </div>
                 </div>
               )}
