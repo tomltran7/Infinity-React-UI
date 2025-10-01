@@ -1,3 +1,38 @@
+// Preview component for decision table JSON
+const DecisionTablePreview = ({ data, onAsk }) => {
+  if (!data || !data.columns || !data.rows) return null;
+  return (
+    <div className="my-2 border rounded bg-white shadow p-2 overflow-x-auto">
+      <div className="font-semibold text-xs text-gray-700 mb-1">Extracted Decision Table</div>
+      <table className="min-w-full border text-xs">
+        <thead>
+          <tr>
+            {data.columns.map((col, idx) => (
+              <th key={idx} className="border p-1 bg-gray-100">{col.name} <span className="text-gray-400">({col.type})</span></th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.rows.map((row, rIdx) => (
+            <tr key={rIdx}>
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="border p-1">{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {onAsk && (
+        <button
+          className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+          onClick={() => onAsk(data)}
+        >
+          Ask about this table
+        </button>
+      )}
+    </div>
+  );
+};
 import React, { useState } from 'react';
 import { Bot, Send, ChevronRight } from 'lucide-react';
 
@@ -109,26 +144,43 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
       </div>
       <>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`p-3 rounded-lg ${
-                message.type === 'user'
-                  ? 'bg-blue-100 ml-4'
-                  : 'bg-gray-100 mr-4'
-              }`}
-            >
-              <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-              {message.type === 'assistant' && message.content.includes('rule ') && (
-                <button
-                  onClick={() => onSuggestion && onSuggestion(message.content)}
-                  className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                >
-                  Apply to Editor
-                </button>
-              )}
-            </div>
-          ))}
+          {messages.map((message, index) => {
+            // Detect if this is an extracted decision table JSON message
+            let parsedJson = null;
+            if (
+              message.type === 'assistant' &&
+              message.content.startsWith('Here is the extracted decision table JSON:')
+            ) {
+              try {
+                const match = message.content.match(/\n\n([\s\S]*)$/);
+                if (match) parsedJson = JSON.parse(match[1]);
+              } catch (e) { /* ignore */ }
+            }
+            return (
+              <div
+                key={index}
+                className={`p-3 rounded-lg ${
+                  message.type === 'user'
+                    ? 'bg-blue-100 ml-4'
+                    : 'bg-gray-100 mr-4'
+                }`}
+              >
+                {parsedJson ? (
+                  <DecisionTablePreview data={parsedJson} onAsk={(data) => setInput(`What can you tell me about this decision table?`)} />
+                ) : (
+                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                )}
+                {message.type === 'assistant' && message.content.includes('rule ') && (
+                  <button
+                    onClick={() => onSuggestion && onSuggestion(message.content)}
+                    className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    Apply to Editor
+                  </button>
+                )}
+              </div>
+            );
+          })}
           {isTyping && (
             <div className="bg-gray-100 mr-4 p-3 rounded-lg">
               <div className="flex items-center gap-2">
