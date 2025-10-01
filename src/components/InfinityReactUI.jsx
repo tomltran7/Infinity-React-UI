@@ -171,6 +171,20 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
         <div className="mb-2 flex gap-2">
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addRow}>Add Row</button>
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addColumn}>Add Column</button>
+          <button
+            className="px-3 py-1 bg-blue-600 text-white rounded"
+            onClick={() => {
+              const json = JSON.stringify({ columns, rows }, null, 2);
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(json);
+                alert('Decision table JSON copied to clipboard!');
+              } else {
+                window.prompt('Copy the JSON below:', json);
+              }
+            }}
+          >
+            Extract JSON
+          </button>
         </div>
         <div className="overflow-auto">
           <table className="min-w-full border text-sm">
