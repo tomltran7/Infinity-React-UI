@@ -1,13 +1,18 @@
+
+
 import React, { useState, useEffect } from 'react';
 import PeerReview from './PeerReview';
 import Reporting from './Reporting';
 import InfinityAssistant from './InfinityAssistant';
 
+// Add state to hold extracted JSON for chat
+// (This should be inside the component, not at the top level)
+
 // Stub Decision Table IDE
 const DATATYPES = ['String', 'Number', 'Boolean', 'Date'];
 const CONDITIONS = ['Equals', 'Greater Than', 'Less Than', 'Contains'];
 
-const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: initialRows, setTable, testCases: initialTestCases, logChange }) => {
+const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: initialRows, setTable, testCases: initialTestCases, logChange, onExtractJson }) => {
   // Decision Table state
   const [title, setTitle] = useState(initialTitle || 'New Decision Table');
   const [columns, setColumns] = useState(initialColumns || [
@@ -174,13 +179,7 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
           <button
             className="px-3 py-1 bg-blue-600 text-white rounded"
             onClick={() => {
-              const json = JSON.stringify({ columns, rows }, null, 2);
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(json);
-                alert('Decision table JSON copied to clipboard!');
-              } else {
-                window.prompt('Copy the JSON below:', json);
-              }
+              if (onExtractJson) onExtractJson({ columns, rows });
             }}
           >
             Extract JSON
@@ -586,7 +585,8 @@ import {
 } from 'lucide-react';
 
 const InfinityReactUI = () => {
-  // ...existing code...
+  // State for extracted JSON to send to chat
+  const [extractedJsonForChat, setExtractedJsonForChat] = useState(null);
   // Sidebar minimize state for chat
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState('changes');
@@ -945,10 +945,10 @@ const InfinityReactUI = () => {
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${repoDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {showAddRepo && (
-              <div className="mt-2 flex flex-col gap-2">
+              <div className="mt-2 flex space-x-2">
                 <input
                   type="text"
-                  className="border rounded px-2 py-1 text-sm"
+                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                   placeholder="New repository name"
                   value={newRepoName}
                   onChange={e => setNewRepoName(e.target.value)}
@@ -1290,6 +1290,7 @@ const InfinityReactUI = () => {
                         testCases={modelsForRepo[activeModelIdx].testCases}
                         setTable={updated => updateModel(activeModelIdx, updated)}
                         logChange={logChange}
+                        onExtractJson={setExtractedJsonForChat}
                       />
                     ) : editorMode === 'table' ? (
                       <div className="p-8 text-gray-500">No models for this repository. Add a model to begin.</div>
@@ -1306,7 +1307,11 @@ const InfinityReactUI = () => {
                     className={`border-l bg-gray-50 flex flex-col transition-all duration-200 ${isChatMinimized ? 'w-12 min-w-0 max-w-12 items-center justify-center p-0' : 'w-96 min-w-80 max-w-lg p-4'}`}
                     style={{ overflow: 'hidden' }}
                   >
-                    <InfinityAssistant isMinimized={isChatMinimized} setIsMinimized={setIsChatMinimized} />
+                    <InfinityAssistant 
+                      isMinimized={isChatMinimized} 
+                      setIsMinimized={setIsChatMinimized}
+                      extractedJsonForChat={extractedJsonForChat}
+                    />
                   </div>
                 </div>
               )}

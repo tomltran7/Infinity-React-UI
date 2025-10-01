@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { Bot, Send, ChevronRight } from 'lucide-react';
 
-const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized }) => {
+const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extractedJsonForChat }) => {
+  // When extractedJsonForChat changes, add it as a message
+  React.useEffect(() => {
+    if (extractedJsonForChat) {
+      setMessages(prev => [
+        ...prev,
+        {
+          type: 'assistant',
+          content: `Here is the extracted decision table JSON:\n\n${JSON.stringify(extractedJsonForChat, null, 2)}`
+        }
+      ]);
+    }
+  }, [extractedJsonForChat]);
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
