@@ -863,7 +863,13 @@ const InfinityReactUI = () => {
   // Update model (Decision Table) state for selected repo
   const updateModel = (idx, updated) => {
     const modelId = modelsForRepo[idx]?.id;
-    setModels(models.map(m => m.id === modelId ? { ...m, ...updated } : m));
+    setModels(models => models.map(m => {
+      if (m.id === modelId) {
+        // Always create a new object, even if contents are the same
+        return { ...m, ...updated };
+      }
+      return m;
+    }));
   };
 
   // Page state
@@ -1299,14 +1305,19 @@ const InfinityReactUI = () => {
                     )}
                     {editorMode === 'table' && modelsForRepo.length > 0 ? (
                       <DecisionTableIDE
-                        key={modelsForRepo[activeModelIdx].id}
+                        key={
+                          modelsForRepo[activeModelIdx].id +
+                          '-' +
+                          (modelsForRepo[activeModelIdx].columns ? modelsForRepo[activeModelIdx].columns.map(c => c.name).join(',') : '') +
+                          '-' +
+                          (modelsForRepo[activeModelIdx].rows ? modelsForRepo[activeModelIdx].rows.length : 0)
+                        }
                         title={modelsForRepo[activeModelIdx].title}
                         columns={modelsForRepo[activeModelIdx].columns}
                         rows={modelsForRepo[activeModelIdx].rows}
                         testCases={modelsForRepo[activeModelIdx].testCases}
                         setTable={updated => updateModel(activeModelIdx, updated)}
                         logChange={logChange}
-
                       />
                     ) : editorMode === 'table' ? (
                       <div className="p-8 text-gray-500">No models for this repository. Add a model to begin.</div>
@@ -1372,6 +1383,67 @@ const InfinityReactUI = () => {
                             ? modelsForRepo[activeModelIdx].testCases
                             : []
                         }
+                        onSuggestion={rec => {
+                          // rec is expected to be an object with columns, rows, and/or testCases
+                          if (!rec) return;
+                          // Parse rec if it is a string
+                          let recObj = rec;
+                          if (typeof recObj === 'string') {
+                            try { recObj = JSON.parse(recObj); } catch (e) { recObj = null; }
+                          }
+                          if (!recObj) return;
+                          const currentModel = modelsForRepo[activeModelIdx];
+                          let updated = {};
+                          // Merge or replace columns depending on recommendation
+                          if (recObj.columns) {
+                            const existingCols = currentModel.columns || [];
+                            const recColNames = recObj.columns.map(c => c.name);
+                            const existingColNames = existingCols.map(c => c.name);
+                            // If recommendation columns contains all existing columns (by name, in order), treat as replacement
+                            const isFullReplacement = existingColNames.every((name, idx) => recColNames[idx] === name) && recColNames.length >= existingColNames.length;
+                            if (isFullReplacement) {
+                              updated.columns = recObj.columns;
+                              // Update rows to match new columns length
+                              const newColCount = recObj.columns.length;
+                              updated.rows = (currentModel.rows || []).map(row => {
+                                const diff = newColCount - row.length;
+                                return diff > 0 ? [...row, ...Array(diff).fill('')] : row.slice(0, newColCount);
+                              });
+                            } else {
+                              // Only add new columns
+                              const newCols = recObj.columns.filter(
+                                col => !existingCols.some(ec => ec.name === col.name)
+                              );
+                              updated.columns = [...existingCols, ...newCols];
+                              // Update rows to add empty cells for new columns
+                              if (newCols.length > 0) {
+                                const newColCount = updated.columns.length;
+                                updated.rows = (currentModel.rows || []).map(row => {
+                                  const diff = newColCount - row.length;
+                                  return diff > 0 ? [...row, ...Array(diff).fill('')] : row;
+                                });
+                              }
+                            }
+                          }
+                          // If rows are provided, use them (overrides above)
+                          if (recObj.rows) {
+                            updated.rows = recObj.rows;
+                          }
+                          // If testCases are provided, use them
+                          if (recObj.testCases) {
+                            updated.testCases = recObj.testCases;
+                          }
+                          // Ensure updated is an object, not a string
+                          if (typeof updated === 'string') {
+                            try { updated = JSON.parse(updated); } catch (e) { updated = {}; }
+                          }
+                          // Debug: log recommendation and update (raw objects)
+                          console.log('Apply Recommendation debug:', {rec: recObj, updated, activeModelIdx});
+                          if (Object.keys(updated).length > 0) {
+                            updateModel(activeModelIdx, updated);
+                            alert('Recommendation applied to the decision table!');
+                          }
+                        }}
                       />
                     </div>
                   </div>

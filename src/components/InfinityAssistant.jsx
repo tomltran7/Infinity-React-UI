@@ -60,9 +60,9 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
         body: JSON.stringify({ message: userInput })
       });
       const data = await res.json();
-      return data.reply || 'Sorry, I could not get a response.';
+      return data;
     } catch (err) {
-      return 'Error contacting assistant. Please try again.';
+      return { reply: 'Error contacting assistant. Please try again.' };
     }
   };
 
@@ -93,8 +93,17 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
       contextInput = `User question: ${input}`;
       contextInput += `\n\nTest Suite (test cases):\n${JSON.stringify(modelTestCases, null, 2)}`;
     }
-    const response = await getOpenAIResponse(contextInput);
-    setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
+    const data = await getOpenAIResponse(contextInput);
+    // Always parse recommendation as object if it's a string
+    let recObj = data.recommendation;
+    if (typeof recObj === 'string') {
+      try { recObj = JSON.parse(recObj); } catch (e) { recObj = null; }
+    }
+    setMessages(msgs => [...msgs, {
+      type: 'assistant',
+      content: data.reply,
+      recommendation: recObj || null
+    }]);
     setIsTyping(false);
   };
 
@@ -163,7 +172,7 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
             let parsedJson = null;
             if (
               message.type === 'assistant' &&
-              message.content.startsWith('Here is the extracted decision table JSON:')
+              message.content && message.content.startsWith('Here is the extracted decision table JSON:')
             ) {
               try {
                 const match = message.content.match(/\n\n([\s\S]*)$/);
@@ -182,7 +191,29 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                 {parsedJson ? (
                   <DecisionTablePreview data={parsedJson} onAsk={handleAskAboutTable} />
                 ) : (
-                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  <>
+                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                    {/* Show Apply button if recommendation is present and valid */}
+                    {message.recommendation && (
+                      (() => {
+                        let recObj = message.recommendation;
+                        if (typeof recObj === 'string') {
+                          try { recObj = JSON.parse(recObj); } catch (e) { recObj = null; }
+                        }
+                        if (recObj && (recObj.columns || recObj.rows || recObj.testCases)) {
+                          return (
+                            <button
+                              className="mt-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                              onClick={() => onSuggestion && onSuggestion(recObj)}
+                            >
+                              Apply Recommendation
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()
+                    )}
+                  </>
                 )}
               </div>
             );
