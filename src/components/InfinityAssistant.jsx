@@ -38,9 +38,35 @@ const DecisionTablePreview = ({ data, onAsk }) => {
   );
 };
 import React, { useState } from 'react';
-import { Bot, Send, ChevronRight, Bug } from 'lucide-react';
+import { Bot, Send, ChevronRight, Bug, GripIcon } from 'lucide-react';
 
 const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable, modelTestCases }) => {
+  // Chat input height state for resizing
+  const [inputHeight, setInputHeight] = useState(40);
+  const inputRef = React.useRef(null);
+  const [dragging, setDragging] = useState(false);
+  // Track initial mouse position for resizing
+  const dragStartY = React.useRef(0);
+  const dragStartHeight = React.useRef(40);
+
+  React.useEffect(() => {
+    if (!dragging) return;
+    const handleMouseMove = (e) => {
+      const deltaY = dragStartY.current - e.clientY;
+      let newHeight = Math.max(40, Math.min(200, dragStartHeight.current + deltaY));
+      setInputHeight(newHeight);
+    };
+    const handleMouseUp = () => {
+      setDragging(false);
+      document.body.style.cursor = '';
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragging]);
   // Debug toggle state
   const [showDebug, setShowDebug] = useState(false);
   const [messages, setMessages] = useState([
@@ -289,15 +315,34 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
         </div>
         <div className="p-4 border-t">
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSendMessage()}
-              placeholder="Ask about DRL rules, DMN decisions..."
-              disabled={isTyping}
-              className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              <div
+                style={{ height: 16, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: dragging ? '#c7d2fe' : '#e5e7eb', borderRadius: 4, marginBottom: 2 }}
+                onMouseDown={e => {
+                  setDragging(true);
+                  dragStartY.current = e.clientY;
+                  dragStartHeight.current = inputHeight;
+                  document.body.style.cursor = 'ns-resize';
+                }}
+              >
+                <GripIcon className="w-4 h-4 text-gray-400" />
+              </div>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Ask about DRL rules, DMN decisions..."
+                disabled={isTyping}
+                style={{ minHeight: 40, maxHeight: 200, height: inputHeight, resize: 'none' }}
+                className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 overflow-auto w-full"
+              />
+            </div>
             <button
               onClick={handleSendMessage}
               disabled={isTyping || !input.trim()}
