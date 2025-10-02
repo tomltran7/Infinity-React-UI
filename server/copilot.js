@@ -40,19 +40,38 @@ app.post('/api/copilot', async (req, res) => {
     // Try to extract a JSON recommendation block from the reply
     let recommendation = null;
     try {
-      // Look for a JSON block in the reply
-      const match = reply.match(/```json([\s\S]*?)```/i) || reply.match(/\{[\s\S]*\}/);
+      // Try to extract any valid JSON array/object from the reply, even with comments
+      let match = reply.match(/```json([\s\S]*?)```/i);
+      if (!match) match = reply.match(/\[[\s\S]*\]/); // Array block
+      if (!match) match = reply.match(/\{[\s\S]*\}/); // Object block
+      if (!match) {
+        // Try to find any JSON array in the reply, even if surrounded by other text
+        const arrMatch = reply.match(/(\[[^\]]*\])/);
+        match = arrMatch;
+      }
       if (match) {
-        const jsonStr = match[1] ? match[1] : match[0];
-        const parsed = JSON.parse(jsonStr);
-        // If the parsed object has a 'recommendation' key, use that, else use the whole object
-        if (parsed && parsed.recommendation) {
-          recommendation = parsed.recommendation;
-        } else if (parsed) {
-          recommendation = parsed;
+        try {
+          let jsonStr = match[1] ? match[1] : match[0];
+          // Remove JS-style comments and trailing commas
+          jsonStr = jsonStr.replace(/\/\*.*?\*\//gs, '').replace(/\s*\/\/.*$/gm, '').replace(/,\s*([\]\}])/g, '$1');
+          // Remove newlines and extra whitespace
+          jsonStr = jsonStr.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && parsed.recommendation) {
+            recommendation = parsed.recommendation;
+          } else if (parsed) {
+            recommendation = parsed;
+          }
+        } catch (e) {
+          console.log('JSON parse error:', e, jsonStr);
         }
       }
-    } catch (e) { /* ignore */ }
+      if (!recommendation) {
+        console.log('No recommendation extracted. Raw reply:', reply);
+      }
+    } catch (e) {
+      console.log('Extraction error:', e);
+    }
 
     // Debug: log the extracted recommendation
     console.log('Extracted recommendation:', recommendation);
