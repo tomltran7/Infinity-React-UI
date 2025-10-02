@@ -25,7 +25,11 @@ const DecisionTablePreview = ({ data, onAsk }) => {
       {onAsk && (
         <button
           className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-          onClick={() => onAsk(data)}
+          onClick={async () => {
+            // Send the JSON as user input
+            const jsonString = JSON.stringify(data, null, 2);
+            onAsk(jsonString);
+          }}
         >
           Ask about this table
         </button>
@@ -83,11 +87,16 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
     }
     const userMessage = { type: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
-    const currentInput = input;
     setInput('');
     setIsTyping(true);
-  
-    const response = await getOpenAIResponse(currentInput);
+
+    // Check if user refers to the decision table
+    const refersToTable = /decision table|this table|the table|above table|extracted table/i.test(input);
+    let contextInput = input;
+    if (refersToTable && extractedJsonForChat) {
+      contextInput = `User question: ${input}\n\nDecision Table JSON:\n${JSON.stringify(extractedJsonForChat, null, 2)}`;
+    }
+    const response = await getOpenAIResponse(contextInput);
     setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
     setIsTyping(false);
   };
@@ -117,6 +126,14 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
     );
   }
   // ...existing code for expanded state...
+  // Handler for 'Ask about this table' button
+  const handleAskAboutTable = async (jsonString) => {
+    setIsTyping(true);
+    const response = await getOpenAIResponse(jsonString);
+    setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
+    setIsTyping(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b bg-blue-50">
@@ -166,7 +183,7 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
                 }`}
               >
                 {parsedJson ? (
-                  <DecisionTablePreview data={parsedJson} onAsk={(data) => setInput(`What can you tell me about this decision table?`)} />
+                  <DecisionTablePreview data={parsedJson} onAsk={handleAskAboutTable} />
                 ) : (
                   <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                 )}
