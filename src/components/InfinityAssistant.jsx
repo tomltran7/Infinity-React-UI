@@ -79,7 +79,7 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
     setIsTyping(true);
 
     // Check if user refers to the decision table or test cases
-    const refersToTable = /decision table|this table|the table|above table|extracted table/i.test(input);
+    const refersToTable = /decision table|this table|the table|above table|extracted table|model|this model|the model|above model|extracted model/i.test(input);
     const refersToTest = /test case|test cases|test suite|test|expected output|assert|pass|fail|verify|validation|scenario/i.test(input);
     let contextInput = input;
     // If both, include both; if only one, include that
