@@ -50,9 +50,10 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
       content: "Hello! I'm your Infinity assistant. I can help you write Decision Table rules, create DMN models, and debug your business logic. Try asking me about rule syntax or decision table best practices!"
     }
   ]);
-  // Helper: check if last user message is about test suite/test cases
+  // Helper: check if last user message is about test suite/test cases or decision table modification
   const lastUserMessage = messages.length > 0 ? messages.filter(m => m.type === 'user').slice(-1)[0]?.content || '' : '';
   const isTestSuiteContext = /test case|test cases|test suite|add test|update test|suggest test|assert|verify|validation|scenario/i.test(lastUserMessage);
+  const isDecisionTableContext = /decision table|column|row|modify|add column|add row|remove column|remove row|update column|update row|recommendation|json/i.test(lastUserMessage);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
@@ -211,6 +212,7 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                     {showDebug && (
                       <pre className="bg-blue-50 text-xs p-2 rounded border border-blue-200 mb-2 overflow-x-auto">
                         <strong>Debug Context:</strong> {'isTestSuiteContext: ' + JSON.stringify(isTestSuiteContext)}
+                        {'\nisDecisionTableContext: ' + JSON.stringify(isDecisionTableContext)}
                         {'\nlastUserMessage: ' + JSON.stringify(lastUserMessage)}
                       </pre>
                     )}
@@ -220,54 +222,58 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                       if (typeof recObj === 'string') {
                         try { recObj = JSON.parse(recObj); } catch (e) { recObj = null; }
                       }
-                      const isTestCasesArray = Array.isArray(recObj) && recObj.length > 0 && recObj.some(tc => tc && Array.isArray(tc.inputs) && tc.expected !== undefined);
+                      let isTestCasesArray = Array.isArray(recObj) && recObj.length > 0 && recObj.some(tc => tc && Array.isArray(tc.inputs) && tc.expected !== undefined);
+                      // Support single test case object
+                      if (!isTestCasesArray && recObj && recObj.inputs && recObj.expected !== undefined) {
+                        isTestCasesArray = true;
+                        recObj = [recObj];
+                      }
+                      const isDecisionTableArray = recObj && recObj.columns && Array.isArray(recObj.columns) && recObj.rows && Array.isArray(recObj.rows);
                       return (
                         <>
                           {showDebug && (
                             <pre className="bg-pink-50 text-xs p-2 rounded border border-pink-200 mb-2 overflow-x-auto">
                               <strong>Debug recObj:</strong> {JSON.stringify(recObj, null, 2)}
                               {'\nisTestCasesArray: ' + JSON.stringify(isTestCasesArray)}
+                              {'\nisDecisionTableArray: ' + JSON.stringify(isDecisionTableArray)}
                             </pre>
                           )}
-                          {/* Show Apply to Test Suite button if valid test case array and context */}
-                          {isTestCasesArray && isTestSuiteContext && (
+                          {/* Show Apply to Test Suite button if valid test case array and context. If both contexts are true, test suite takes precedence. */}
+                          {isTestCasesArray && isTestSuiteContext ? (
                             (() => {
-                              const suggested = recObj;
-                              const existing = Array.isArray(modelTestCases) ? modelTestCases : [];
-                              const isDuplicate = (a, b) => {
-                                if (!a || !b) return false;
-                                const inputsEqual = Array.isArray(a.inputs) && Array.isArray(b.inputs) && a.inputs.length === b.inputs.length && a.inputs.every((v, i) => v === b.inputs[i]);
-                                return inputsEqual && a.expected === b.expected;
-                              };
-                              const newTestCases = suggested.filter(sugg => !existing.some(exist => isDuplicate(sugg, exist)));
-                              let updatedTestCases = [];
-                              if (existing.length === 0) {
-                                updatedTestCases = suggested;
-                              } else if (newTestCases.length > 0) {
-                                updatedTestCases = [...existing, ...newTestCases];
-                              } else {
-                                updatedTestCases = existing;
-                              }
-                              const handleApplyToTestSuite = () => {
-                                if (newTestCases.length === 0) {
-                                  alert('All suggested test cases are already present. No new test cases added.');
-                                  return;
-                                }
+                              const handleApplyTestSuite = () => {
                                 if (onSuggestion) {
-                                  onSuggestion({ testCases: updatedTestCases });
-                                  alert(`${newTestCases.length > 0 ? newTestCases.length : suggested.length} test case(s) applied to the Test Suite.`);
+                                  onSuggestion({ testCases: recObj });
+                                  alert('Test Suite updated with new test cases!');
                                 }
                               };
                               return (
                                 <button
-                                  className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                                  onClick={handleApplyToTestSuite}
+                                  className="mt-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                                  onClick={handleApplyTestSuite}
                                 >
                                   Apply to Test Suite
                                 </button>
                               );
                             })()
-                          )}
+                          ) : (recObj && recObj.columns && recObj.rows && isDecisionTableContext && (
+                            (() => {
+                              const handleApplyRecommendation = () => {
+                                if (onSuggestion) {
+                                  onSuggestion({ columns: recObj.columns, rows: recObj.rows });
+                                  alert('Recommendation applied to the decision table!');
+                                }
+                              };
+                              return (
+                                <button
+                                  className="mt-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                                  onClick={handleApplyRecommendation}
+                                >
+                                  Apply Recommendation
+                                </button>
+                              );
+                            })()
+                          ))}
                         </>
                       );
                     })()}

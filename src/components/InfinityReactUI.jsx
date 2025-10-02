@@ -2,6 +2,17 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
+// Simple hash function for strings
+function hashCode(str) {
+  let hash = 0, i, chr;
+  if (str.length === 0) return hash;
+  for (i = 0; i < str.length; i++) {
+    chr   = str.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
 import { GripIcon } from './ui/GripIcon';
 import PeerReview from './PeerReview';
 import Reporting from './Reporting';
@@ -1316,13 +1327,15 @@ const InfinityReactUI = () => {
                     {editorMode === 'table' && modelsForRepo.length > 0 ? (
                       <DecisionTableIDE
                         key={
-                          modelsForRepo[activeModelIdx].id +
-                          '-' +
-                          JSON.stringify(modelsForRepo[activeModelIdx].columns) +
-                          '-' +
-                          JSON.stringify(modelsForRepo[activeModelIdx].rows) +
-                          '-' +
-                          JSON.stringify(modelsForRepo[activeModelIdx].testCases)
+                          (() => {
+                            const model = modelsForRepo[activeModelIdx];
+                            const str = JSON.stringify({
+                              columns: model.columns,
+                              rows: model.rows,
+                              testCases: model.testCases
+                            });
+                            return model.id + '-' + hashCode(str);
+                          })()
                         }
                         title={modelsForRepo[activeModelIdx].title}
                         columns={modelsForRepo[activeModelIdx].columns}
@@ -1397,7 +1410,6 @@ const InfinityReactUI = () => {
                             : []
                         }
                         onSuggestion={rec => {
-                          // rec is expected to be an object with columns, rows, and/or testCases
                           if (!rec) return;
                           let recObj = rec;
                           if (typeof recObj === 'string') {
@@ -1405,52 +1417,45 @@ const InfinityReactUI = () => {
                           }
                           if (!recObj) return;
                           const currentModel = modelsForRepo[activeModelIdx];
-                          let updated = {};
-                          // Merge or replace columns depending on recommendation
-                          if (recObj.columns) {
-                            const existingCols = currentModel.columns || [];
-                            const recColNames = recObj.columns.map(c => c.name);
-                            const existingColNames = existingCols.map(c => c.name);
-                            const isFullReplacement = existingColNames.every((name, idx) => recColNames[idx] === name) && recColNames.length >= existingColNames.length;
-                            if (isFullReplacement) {
-                              updated.columns = recObj.columns;
-                              const newColCount = recObj.columns.length;
-                              updated.rows = (currentModel.rows || []).map(row => {
-                                const diff = newColCount - row.length;
-                                return diff > 0 ? [...row, ...Array(diff).fill('')] : row.slice(0, newColCount);
-                              });
-                            } else {
-                              const newCols = recObj.columns.filter(
-                                col => !existingCols.some(ec => ec.name === col.name)
-                              );
-                              updated.columns = [...existingCols, ...newCols];
-                              if (newCols.length > 0) {
-                                const newColCount = updated.columns.length;
+                          // Only update decision table if columns/rows are present and NOT testCases
+                          if (recObj.columns || recObj.rows) {
+                            let updated = {};
+                            if (recObj.columns) {
+                              const existingCols = currentModel.columns || [];
+                              const recColNames = recObj.columns.map(c => c.name);
+                              const existingColNames = existingCols.map(c => c.name);
+                              const isFullReplacement = existingColNames.every((name, idx) => recColNames[idx] === name) && recColNames.length >= existingColNames.length;
+                              if (isFullReplacement) {
+                                updated.columns = recObj.columns;
+                                const newColCount = recObj.columns.length;
                                 updated.rows = (currentModel.rows || []).map(row => {
                                   const diff = newColCount - row.length;
-                                  return diff > 0 ? [...row, ...Array(diff).fill('')] : row;
+                                  return diff > 0 ? [...row, ...Array(diff).fill('')] : row.slice(0, newColCount);
                                 });
+                              } else {
+                                const newCols = recObj.columns.filter(
+                                  col => !existingCols.some(ec => ec.name === col.name)
+                                );
+                                updated.columns = [...existingCols, ...newCols];
+                                if (newCols.length > 0) {
+                                  const newColCount = updated.columns.length;
+                                  updated.rows = (currentModel.rows || []).map(row => {
+                                    const diff = newColCount - row.length;
+                                    return diff > 0 ? [...row, ...Array(diff).fill('')] : row;
+                                  });
+                                }
                               }
                             }
-                          }
-                          if (recObj.rows) {
-                            updated.rows = recObj.rows;
-                          }
-                          // Only update testCases if present in payload (for Apply to Test Suite)
-                          if (Object.prototype.hasOwnProperty.call(recObj, 'testCases')) {
-                            updated.testCases = recObj.testCases;
-                          }
-                          if (typeof updated === 'string') {
-                            try { updated = JSON.parse(updated); } catch (e) { updated = {}; }
-                          }
-                          console.log('Apply Recommendation debug:', {rec: recObj, updated, activeModelIdx});
-                          if (Object.keys(updated).length > 0) {
-                            updateModel(activeModelIdx, updated);
-                            if (Object.prototype.hasOwnProperty.call(recObj, 'testCases')) {
-                              alert('Test Suite updated with new test cases!');
-                            } else {
-                              alert('Recommendation applied to the decision table!');
+                            if (recObj.rows) {
+                              updated.rows = recObj.rows;
                             }
+                            updateModel(activeModelIdx, updated);
+                            alert('Recommendation applied to the decision table!');
+                          }
+                          // Only update test suite if testCases is present and NOT columns/rows
+                          else if (Object.prototype.hasOwnProperty.call(recObj, 'testCases')) {
+                            updateModel(activeModelIdx, { testCases: recObj.testCases });
+                            alert('Test Suite updated with new test cases!');
                           }
                         }}
                       />
