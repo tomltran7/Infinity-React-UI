@@ -40,4 +40,4 @@ app.post('/api/copilot', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Copilot API running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Horizon Hub API running on port ${PORT}`));

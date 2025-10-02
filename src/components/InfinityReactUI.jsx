@@ -1,12 +1,19 @@
 
 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { GripIcon } from './ui/GripIcon';
 import PeerReview from './PeerReview';
 import Reporting from './Reporting';
 import InfinityAssistant from './InfinityAssistant';
+import InfinityIcon from '../assets/infinity.svg';
+import { 
+  ChevronDown, Plus, RefreshCw, GitBranch, GitCommit, Clock, 
+  FileText, FolderOpen, Settings, User, Search, X, AlertCircle, 
+  GitPullRequest, Download, Upload, Home, BarChart2 
+} from 'lucide-react';
 
-// Add state to hold extracted JSON for chat
-// (This should be inside the component, not at the top level)
+
 
 // Stub Decision Table IDE
 const DATATYPES = ['String', 'Number', 'Boolean', 'Date'];
@@ -31,15 +38,6 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
   const saveTable = () => {
     if (setTable) {
       setTable({
-        title,
-        columns,
-        rows,
-        testCases
-      });
-    }
-    if (logChange) {
-      logChange({
-        timestamp: new Date().toISOString(),
         title,
         columns,
         rows,
@@ -569,14 +567,40 @@ const DMNIDE = ({ model, setModel, logChange }) => {
     </div>
   );
 };
-import InfinityIcon from '../assets/infinity.svg';
-import { 
-  ChevronDown, Plus, RefreshCw, GitBranch, GitCommit, Clock, 
-  FileText, FolderOpen, Settings, User, Search, X, AlertCircle, 
-  GitPullRequest, Download, Upload, Home, BarChart2 
-} from 'lucide-react';
 
 const InfinityReactUI = () => {
+  // --- Resizable Chat Panel Hooks (must be inside component) ---
+  const MIN_CHAT_WIDTH = 280; // px
+  const MAX_CHAT_WIDTH = 600; // px
+  const [chatPanelWidth, setChatPanelWidth] = useState(() => {
+    if (typeof window !== 'undefined' && window._infinityChatPanelWidth) return window._infinityChatPanelWidth;
+    return 384; // default 24rem (w-96)
+  });
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+  const chatPanelWidthRef = useRef(chatPanelWidth);
+  useEffect(() => {
+    chatPanelWidthRef.current = chatPanelWidth;
+  }, [chatPanelWidth]);
+  useEffect(() => {
+    const onMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      // Reverse direction: dragging left increases width, right decreases
+      const dx = startXRef.current - e.clientX;
+      let newWidth = startWidthRef.current + dx;
+      newWidth = Math.max(MIN_CHAT_WIDTH, Math.min(MAX_CHAT_WIDTH, newWidth));
+      setChatPanelWidth(newWidth);
+      window._infinityChatPanelWidth = newWidth;
+    };
+    const onMouseUp = () => { isDraggingRef.current = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
   // State for extracted JSON to send to chat
 
   // Sidebar minimize state for chat
@@ -1294,28 +1318,62 @@ const InfinityReactUI = () => {
                       />
                     )}
                   </div>
-                  {/* Copilot Assistant Sidebar */}
-                  <div
-                    className={`border-l bg-gray-50 flex flex-col transition-all duration-200 ${isChatMinimized ? 'w-12 min-w-0 max-w-12 items-center justify-center p-0' : 'w-96 min-w-80 max-w-lg p-4'}`}
-                    style={{ overflow: 'hidden' }}
-                  >
-                    <InfinityAssistant 
-                      isMinimized={isChatMinimized} 
-                      setIsMinimized={setIsChatMinimized}
-                      modelDecisionTable={
-                        editorMode === 'table' && modelsForRepo.length > 0
-                          ? {
-                              columns: modelsForRepo[activeModelIdx].columns,
-                              rows: modelsForRepo[activeModelIdx].rows
-                            }
-                          : null
-                      }
-                      modelTestCases={
-                        editorMode === 'table' && modelsForRepo.length > 0
-                          ? modelsForRepo[activeModelIdx].testCases
-                          : []
-                      }
-                    />
+                  {/* Copilot Assistant Sidebar - Resizable */}
+                  <div style={{ display: 'flex', height: '100%' }}>
+                    {/* Draggable handle with grip icon */}
+                    <div
+                      className="group flex items-center justify-center h-full relative"
+                      style={{ cursor: 'ew-resize', width: 16, background: isDraggingRef.current ? '#c7d2fe' : '#e5e7eb', zIndex: 30, position: 'relative', transition: 'background 0.2s' }}
+                      onMouseDown={e => {
+                        isDraggingRef.current = true;
+                        startXRef.current = e.clientX;
+                        startWidthRef.current = chatPanelWidthRef.current;
+                      }}
+                      title="Drag to resize chat panel"
+                      tabIndex={0}
+                      aria-label="Resize chat panel"
+                      aria-valuenow={chatPanelWidth}
+                      aria-valuemin={MIN_CHAT_WIDTH}
+                      aria-valuemax={MAX_CHAT_WIDTH}
+                      role="slider"
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowLeft') {
+                          setChatPanelWidth(w => Math.max(MIN_CHAT_WIDTH, w - 10));
+                          window._infinityChatPanelWidth = Math.max(MIN_CHAT_WIDTH, chatPanelWidth - 10);
+                          e.preventDefault();
+                        } else if (e.key === 'ArrowRight') {
+                          setChatPanelWidth(w => Math.min(MAX_CHAT_WIDTH, w + 10));
+                          window._infinityChatPanelWidth = Math.min(MAX_CHAT_WIDTH, chatPanelWidth + 10);
+                          e.preventDefault();
+                        }
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.cursor = 'ew-resize'}
+                      onFocus={e => e.currentTarget.style.cursor = 'ew-resize'}
+                    >
+                      <GripIcon className="pointer-events-none opacity-70 group-hover:opacity-100 transition" />
+                    </div>
+                    <div
+                      className={`border-l bg-gray-50 flex flex-col transition-all duration-200 ${isChatMinimized ? 'w-12 min-w-0 max-w-12 items-center justify-center p-0' : 'p-4'} ${isDraggingRef.current ? 'ring-2 ring-blue-400' : ''}`}
+                      style={{ overflow: 'hidden', width: isChatMinimized ? 48 : chatPanelWidth, minWidth: isChatMinimized ? 48 : MIN_CHAT_WIDTH, maxWidth: isChatMinimized ? 48 : MAX_CHAT_WIDTH, transition: 'width 0.2s' }}
+                    >
+                      <InfinityAssistant 
+                        isMinimized={isChatMinimized} 
+                        setIsMinimized={setIsChatMinimized}
+                        modelDecisionTable={
+                          editorMode === 'table' && modelsForRepo.length > 0
+                            ? {
+                                columns: modelsForRepo[activeModelIdx].columns,
+                                rows: modelsForRepo[activeModelIdx].rows
+                              }
+                            : null
+                        }
+                        modelTestCases={
+                          editorMode === 'table' && modelsForRepo.length > 0
+                            ? modelsForRepo[activeModelIdx].testCases
+                            : []
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
               )}
