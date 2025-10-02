@@ -40,7 +40,7 @@ const DecisionTablePreview = ({ data, onAsk }) => {
 import React, { useState } from 'react';
 import { Bot, Send, ChevronRight } from 'lucide-react';
 
-const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable }) => {
+const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable, modelTestCases }) => {
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
@@ -78,11 +78,20 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
     setInput('');
     setIsTyping(true);
 
-    // Check if user refers to the decision table
+    // Check if user refers to the decision table or test cases
     const refersToTable = /decision table|this table|the table|above table|extracted table/i.test(input);
+    const refersToTest = /test case|test cases|test suite|test|expected output|assert|pass|fail|verify|validation|scenario/i.test(input);
     let contextInput = input;
-    if (refersToTable && modelDecisionTable && modelDecisionTable.columns && modelDecisionTable.rows) {
-      contextInput = `User question: ${input}\n\nDecision Table JSON:\n${JSON.stringify(modelDecisionTable, null, 2)}`;
+    // If both, include both; if only one, include that
+    if ((refersToTable || refersToTest) && (modelDecisionTable && modelDecisionTable.columns && modelDecisionTable.rows)) {
+      contextInput = `User question: ${input}`;
+      contextInput += `\n\nDecision Table JSON:\n${JSON.stringify(modelDecisionTable, null, 2)}`;
+      if (refersToTest && modelTestCases && Array.isArray(modelTestCases) && modelTestCases.length > 0) {
+        contextInput += `\n\nTest Suite (test cases):\n${JSON.stringify(modelTestCases, null, 2)}`;
+      }
+    } else if (refersToTest && modelTestCases && Array.isArray(modelTestCases) && modelTestCases.length > 0) {
+      contextInput = `User question: ${input}`;
+      contextInput += `\n\nTest Suite (test cases):\n${JSON.stringify(modelTestCases, null, 2)}`;
     }
     const response = await getOpenAIResponse(contextInput);
     setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);

@@ -176,14 +176,6 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
         <div className="mb-2 flex gap-2">
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addRow}>Add Row</button>
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addColumn}>Add Column</button>
-          <button
-            className="px-3 py-1 bg-blue-600 text-white rounded"
-            onClick={() => {
-              if (onExtractJson) onExtractJson({ columns, rows });
-            }}
-          >
-            Add to Chat
-          </button>
         </div>
         <div className="overflow-auto">
           <table className="min-w-full border text-sm">
@@ -1317,6 +1309,11 @@ const InfinityReactUI = () => {
                               rows: modelsForRepo[activeModelIdx].rows
                             }
                           : null
+                      }
+                      modelTestCases={
+                        editorMode === 'table' && modelsForRepo.length > 0
+                          ? modelsForRepo[activeModelIdx].testCases
+                          : []
                       }
                     />
                   </div>
