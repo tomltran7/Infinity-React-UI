@@ -1340,7 +1340,8 @@ const InfinityReactUI = () => {
                         startXRef.current = e.clientX;
                         startWidthRef.current = chatPanelWidthRef.current;
                       }}
-                      title="Drag to resize chat panel"
+                      onDoubleClick={() => setIsChatMinimized(true)}
+                      title="Drag to resize chat panel (double-click to minimize)"
                       tabIndex={0}
                       aria-label="Resize chat panel"
                       aria-valuenow={chatPanelWidth}
