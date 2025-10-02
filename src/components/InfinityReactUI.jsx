@@ -44,6 +44,16 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
         testCases
       });
     }
+    // Log change to history tab
+    if (logChange) {
+      logChange({
+        title: `[Save] ${title}`,
+        columns: [...columns],
+        rows: [...rows],
+        testCases: testCases ? [...testCases] : [],
+        timestamp: Date.now()
+      });
+    }
     localStorage.setItem('decisionTableWIP', JSON.stringify({ title, columns, rows, testCases }));
     alert('Work in progress saved!');
   };
