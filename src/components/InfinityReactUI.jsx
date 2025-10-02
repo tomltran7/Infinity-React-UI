@@ -182,7 +182,7 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
               if (onExtractJson) onExtractJson({ columns, rows });
             }}
           >
-            Extract JSON
+            Add to Chat
           </button>
         </div>
         <div className="overflow-auto">
@@ -586,7 +586,7 @@ import {
 
 const InfinityReactUI = () => {
   // State for extracted JSON to send to chat
-  const [extractedJsonForChat, setExtractedJsonForChat] = useState(null);
+
   // Sidebar minimize state for chat
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState('changes');
@@ -1290,7 +1290,7 @@ const InfinityReactUI = () => {
                         testCases={modelsForRepo[activeModelIdx].testCases}
                         setTable={updated => updateModel(activeModelIdx, updated)}
                         logChange={logChange}
-                        onExtractJson={setExtractedJsonForChat}
+
                       />
                     ) : editorMode === 'table' ? (
                       <div className="p-8 text-gray-500">No models for this repository. Add a model to begin.</div>
@@ -1310,7 +1310,14 @@ const InfinityReactUI = () => {
                     <InfinityAssistant 
                       isMinimized={isChatMinimized} 
                       setIsMinimized={setIsChatMinimized}
-                      extractedJsonForChat={extractedJsonForChat}
+                      modelDecisionTable={
+                        editorMode === 'table' && modelsForRepo.length > 0
+                          ? {
+                              columns: modelsForRepo[activeModelIdx].columns,
+                              rows: modelsForRepo[activeModelIdx].rows
+                            }
+                          : null
+                      }
                     />
                   </div>
                 </div>

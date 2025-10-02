@@ -40,19 +40,7 @@ const DecisionTablePreview = ({ data, onAsk }) => {
 import React, { useState } from 'react';
 import { Bot, Send, ChevronRight } from 'lucide-react';
 
-const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extractedJsonForChat }) => {
-  // When extractedJsonForChat changes, add it as a message
-  React.useEffect(() => {
-    if (extractedJsonForChat) {
-      setMessages(prev => [
-        ...prev,
-        {
-          type: 'assistant',
-          content: `Here is the extracted decision table JSON:\n\n${JSON.stringify(extractedJsonForChat, null, 2)}`
-        }
-      ]);
-    }
-  }, [extractedJsonForChat]);
+const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable }) => {
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
@@ -93,8 +81,8 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
     // Check if user refers to the decision table
     const refersToTable = /decision table|this table|the table|above table|extracted table/i.test(input);
     let contextInput = input;
-    if (refersToTable && extractedJsonForChat) {
-      contextInput = `User question: ${input}\n\nDecision Table JSON:\n${JSON.stringify(extractedJsonForChat, null, 2)}`;
+    if (refersToTable && modelDecisionTable && modelDecisionTable.columns && modelDecisionTable.rows) {
+      contextInput = `User question: ${input}\n\nDecision Table JSON:\n${JSON.stringify(modelDecisionTable, null, 2)}`;
     }
     const response = await getOpenAIResponse(contextInput);
     setMessages(msgs => [...msgs, { type: 'assistant', content: response }]);
@@ -186,14 +174,6 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, extracte
                   <DecisionTablePreview data={parsedJson} onAsk={handleAskAboutTable} />
                 ) : (
                   <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                )}
-                {message.type === 'assistant' && message.content.includes('rule ') && (
-                  <button
-                    onClick={() => onSuggestion && onSuggestion(message.content)}
-                    className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                  >
-                    Apply to Editor
-                  </button>
                 )}
               </div>
             );
