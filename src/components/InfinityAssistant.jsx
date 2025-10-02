@@ -38,9 +38,11 @@ const DecisionTablePreview = ({ data, onAsk }) => {
   );
 };
 import React, { useState } from 'react';
-import { Bot, Send, ChevronRight } from 'lucide-react';
+import { Bot, Send, ChevronRight, Bug } from 'lucide-react';
 
 const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable, modelTestCases }) => {
+  // Debug toggle state
+  const [showDebug, setShowDebug] = useState(false);
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
@@ -166,6 +168,14 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
           >
             <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><rect x="4" y="9" width="12" height="2" rx="1" fill="currentColor"/></svg>
           </button>
+          <button
+            onClick={() => setShowDebug(v => !v)}
+            className={`p-1 ${showDebug ? 'bg-yellow-100 text-yellow-700' : 'text-gray-500'} hover:text-yellow-700 rounded`}
+            title={showDebug ? 'Hide debug info' : 'Show debug info'}
+            aria-label="Toggle debug info"
+          >
+            <Bug className="w-5 h-5" />
+          </button>
         </div>
       </div>
       <>
@@ -197,10 +207,12 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                   <>
                     <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                     {/* DEBUG: Show context detection for troubleshooting */}
-                    <pre className="bg-blue-50 text-xs p-2 rounded border border-blue-200 mb-2 overflow-x-auto">
-                      <strong>Debug Context:</strong> {'isTestSuiteContext: ' + JSON.stringify(isTestSuiteContext)}
-                      {'\nlastUserMessage: ' + JSON.stringify(lastUserMessage)}
-                    </pre>
+                    {showDebug && (
+                      <pre className="bg-blue-50 text-xs p-2 rounded border border-blue-200 mb-2 overflow-x-auto">
+                        <strong>Debug Context:</strong> {'isTestSuiteContext: ' + JSON.stringify(isTestSuiteContext)}
+                        {'\nlastUserMessage: ' + JSON.stringify(lastUserMessage)}
+                      </pre>
+                    )}
                     {/* DEBUG: Show recObj and isTestCasesArray for troubleshooting */}
                     {(() => {
                       let recObj = message.recommendation;
@@ -210,10 +222,12 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                       const isTestCasesArray = Array.isArray(recObj) && recObj.length > 0 && recObj.some(tc => tc && Array.isArray(tc.inputs) && tc.expected !== undefined);
                       return (
                         <>
-                          <pre className="bg-pink-50 text-xs p-2 rounded border border-pink-200 mb-2 overflow-x-auto">
-                            <strong>Debug recObj:</strong> {JSON.stringify(recObj, null, 2)}
-                            {'\nisTestCasesArray: ' + JSON.stringify(isTestCasesArray)}
-                          </pre>
+                          {showDebug && (
+                            <pre className="bg-pink-50 text-xs p-2 rounded border border-pink-200 mb-2 overflow-x-auto">
+                              <strong>Debug recObj:</strong> {JSON.stringify(recObj, null, 2)}
+                              {'\nisTestCasesArray: ' + JSON.stringify(isTestCasesArray)}
+                            </pre>
+                          )}
                           {/* Show Apply to Test Suite button if valid test case array and context */}
                           {isTestCasesArray && isTestSuiteContext && (
                             (() => {
