@@ -41,6 +41,8 @@ import React, { useState } from 'react';
 import { Bot, Send, ChevronRight, Bug, GripIcon } from 'lucide-react';
 
 const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDecisionTable, modelTestCases }) => {
+  // Fix: Move 'clicked' state to top level to avoid Rules of Hooks violation
+  const [applyTestSuiteClicked, setApplyTestSuiteClicked] = useState(false);
   // No custom drag logic needed for native resize
   // Debug toggle state
   const [showDebug, setShowDebug] = useState(false);
@@ -239,23 +241,34 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                             </pre>
                           )}
                           {/* Show Apply to Test Suite button if valid test case array and context. If both contexts are true, test suite takes precedence. */}
-                          {isTestCasesArray && isTestSuiteContext ? (
-                            (() => {
-                              const handleApplyTestSuite = () => {
-                                if (onSuggestion) {
-                                  onSuggestion({ testCases: recObj });
-                                  alert('Test Suite updated with new test cases!');
-                                }
-                              };
-                              return (
-                                <button
-                                  className="mt-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
-                                  onClick={handleApplyTestSuite}
-                                >
-                                  Apply to Test Suite
-                                </button>
-                              );
-                            })()
+                          {showDebug && (
+                            <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-2 text-xs">
+                              <strong>Visible Debug:</strong>
+                              <div>isTestSuiteContext: {JSON.stringify(isTestSuiteContext)}</div>
+                              <div>isDecisionTableContext: {JSON.stringify(isDecisionTableContext)}</div>
+                              <div>recObj: {JSON.stringify(recObj)}</div>
+                              <div>isTestCasesArray: {JSON.stringify(isTestCasesArray)}</div>
+                              <div>isDecisionTableArray: {JSON.stringify(isDecisionTableArray)}</div>
+                            </div>
+                          )}
+                          {isTestCasesArray ? (
+                            <div>
+                              <button
+                                className="mt-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                                onClick={() => {
+                                  setApplyTestSuiteClicked(true);
+                                  if (onSuggestion) {
+                                    onSuggestion({ testCases: recObj });
+                                    alert('Test Suite updated with new test cases!');
+                                  }
+                                }}
+                              >
+                                Apply to Test Suite
+                              </button>
+                              {applyTestSuiteClicked && (
+                                <div className="mt-2 text-xs text-purple-700">Apply to Test Suite clicked!</div>
+                              )}
+                            </div>
                           ) : (recObj && recObj.columns && recObj.rows && isDecisionTableContext && (
                             (() => {
                               const handleApplyRecommendation = () => {

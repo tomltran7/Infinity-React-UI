@@ -33,7 +33,7 @@ const CONDITIONS = ['Equals', 'Greater Than', 'Less Than', 'Contains'];
 const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: initialRows, setTable, testCases: initialTestCases, logChange, onExtractJson }) => {
   // Decision Table state
   const [title, setTitle] = useState(initialTitle || 'New Decision Table');
-  const [columns, setColumns] = useState(initialColumns || [
+  const [columns, setColumnsRaw] = useState(initialColumns || [
     { name: 'Condition 1', type: 'String', condition: 'Equals' },
     { name: 'Result', type: 'String', condition: 'Equals' }
   ]);
@@ -42,8 +42,104 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
   const inputRefs = React.useRef([]);
 
   // Test suite state
-  const [testCases, setTestCases] = useState(initialTestCases || []);
+  const [testCases, setTestCasesRaw] = useState(initialTestCases || []);
   const [suiteRun, setSuiteRun] = useState(false);
+  // Helper: ensure 'Result' column is last
+  // Helper: ensure output column is last (supports 'Result', 'Output', 'Decision')
+  function ensureResultLast(cols) {
+    const outputNames = ['result', 'output', 'decision'];
+    // Find first output column by name (should only be one)
+    const idx = cols.findIndex(col => outputNames.includes(col.name.trim().toLowerCase()));
+    if (idx === -1) return cols;
+    const resultCol = cols[idx];
+    // Remove output column from its current position
+    const filtered = cols.filter((_, i) => i !== idx);
+    // Always append output column to the end
+    return [...filtered, resultCol];
+  }
+
+  // Helper: realign test cases to current columns (robust name-based mapping)
+  const realignTestCases = (newColumns, prevColumns, prevTestCases) => {
+    // Always treat output column as last after ensureResultLast
+    const outputNames = ['result', 'output', 'decision'];
+    const newCols = ensureResultLast(newColumns);
+    const prevCols = ensureResultLast(prevColumns);
+    const outputColIdx = newCols.length - 1;
+    const inputColumns = newCols.slice(0, outputColIdx);
+    const prevOutputColIdx = prevCols.length - 1;
+    const prevInputColumns = prevCols.slice(0, prevOutputColIdx);
+    const prevInputNames = prevInputColumns.map(col => col.name);
+
+  // Patch: get first row of decision table for autofill
+  // Use the first row of the current rows array (from DecisionTableIDE state)
+  const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+
+  // For each test case, build a mapping from previous input column name to value
+  const mappedTestCases = prevTestCases.map(tc => {
+    // Defensive: if tc.inputs is missing or not an array, treat as empty
+    const inputMap = {};
+    if (Array.isArray(tc.inputs)) {
+      prevInputNames.forEach((name, idx) => {
+        inputMap[name] = tc.inputs[idx];
+      });
+    }
+    // For each new input column, preserve value if it existed, else set to value from first row if available, else ''
+    const newInputs = inputColumns.map((col, idx) => {
+      const preserved = inputMap.hasOwnProperty(col.name) ? inputMap[col.name] : undefined;
+      if (typeof preserved !== 'undefined' && preserved !== null && preserved !== '') {
+        console.log(`[DEBUG][TestSuite] Preserved value for column '${col.name}':`, preserved);
+        return preserved;
+      }
+      // Pattern match: build pattern from other input columns
+      const pattern = inputColumns.map((c, i) => (i === idx ? null : inputMap.hasOwnProperty(c.name) ? inputMap[c.name] : null));
+      let matchedValue = '';
+      if (Array.isArray(rows) && rows.length > 0) {
+        for (let r = 0; r < rows.length; r++) {
+          const row = rows[r];
+          let match = true;
+          for (let i = 0; i < inputColumns.length; i++) {
+            if (i === idx) continue; // skip new column
+            if (pattern[i] !== null && pattern[i] !== row[i]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            matchedValue = row[idx];
+            console.log(`[DEBUG][TestSuite] Autofilled value for column '${col.name}' from matched pattern in decision table row ${r}:`, matchedValue);
+            break;
+          }
+        }
+      }
+      if (matchedValue !== undefined && matchedValue !== null && matchedValue !== '') {
+        return matchedValue;
+      }
+      console.log(`[DEBUG][TestSuite] No value for column '${col.name}', defaulting to empty string.`);
+      return '';
+    });
+    console.log('[DEBUG][TestSuite] Final mapped inputs for test case:', newInputs);
+    return { ...tc, inputs: newInputs };
+  });
+  // Debugger: log mapping of test case inputs to columns
+  console.log('[DecisionTableIDE][realignTestCases] Columns:', inputColumns.map(c => c.name), '[Result]', newCols[outputColIdx]?.name);
+  console.log('[DecisionTableIDE][realignTestCases] TestCases:', mappedTestCases.map(tc => tc.inputs), '[Expected]', mappedTestCases.map(tc => tc.expected));
+  return mappedTestCases;
+  };
+
+  // Patch: wrap setColumns to realign test cases on column change and ensure 'Result' is last
+  const setColumns = (newCols) => {
+  const colsWithResultLast = ensureResultLast(newCols);
+  setColumnsRaw(colsWithResultLast);
+  setTestCasesRaw(prevTestCases => realignTestCases(colsWithResultLast, columns, prevTestCases, rows));
+  };
+
+  // Patch: wrap setTestCases for compatibility
+  const setTestCases = setTestCasesRaw;
+
+    // useEffect: realign testCases whenever columns change (external or UI)
+    useEffect(() => {
+  setTestCasesRaw(prevTestCases => realignTestCases(columns, columns, prevTestCases, rows));
+    }, [columns]);
 
   // Save work in progress and update model title
   const saveTable = () => {
@@ -71,8 +167,22 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
 
   // Add/remove/update logic
   const addColumn = () => {
-    setColumns([...columns, { name: `Condition ${columns.length + 1}`, type: 'String', condition: 'Equals' }]);
-    setRows(rows.map(row => [...row, '']));
+    // Always insert new column before the output column
+    const outputNames = ['result', 'output', 'decision'];
+    const outputIdx = columns.findIndex(col => outputNames.includes(col.name.trim().toLowerCase()));
+    const insertIdx = outputIdx === -1 ? columns.length : outputIdx;
+    const newCol = { name: `Condition ${columns.length + 1}`, type: 'String', condition: 'Equals' };
+    const newColumns = [
+      ...columns.slice(0, insertIdx),
+      newCol,
+      ...columns.slice(insertIdx)
+    ];
+    setColumns(newColumns);
+    setRows(rows.map(row => {
+      const newRow = [...row];
+      newRow.splice(insertIdx, 0, '');
+      return newRow;
+    }));
   };
   const removeColumn = (colIdx) => {
     setColumns(columns.filter((_, idx) => idx !== colIdx));
@@ -121,16 +231,23 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
   };
 
   // Enhanced test suite logic
-  const inputColumns = columns.slice(0, columns.length - 1);
-  const outputColumn = columns[columns.length - 1]?.name || 'Result';
+  // Find the output column by name 'Result' (case-insensitive, fallback to last column)
+  // Always treat output column as last after ensureResultLast
+  const outputNames = ['result', 'output', 'decision'];
+  const colsWithResultLast = ensureResultLast(columns);
+  const outputColIdx = colsWithResultLast.length - 1;
+  const outputColumn = colsWithResultLast[outputColIdx]?.name || 'Result';
+  const inputColumns = colsWithResultLast.slice(0, outputColIdx);
 
   // Run all test cases
   const runTestSuite = () => {
     const updated = testCases.map(tc => {
+      // Find the row that matches all input columns
       const matchRow = rows.find(row =>
-        inputColumns.every((col, idx) => String(row[idx]) === tc.inputs[idx])
+        inputColumns.every((col, idx) => String(row[columns.findIndex(c => c.name === col.name)]) === tc.inputs[idx])
       );
-      const actualOutput = matchRow ? matchRow[columns.length - 1] : 'No match found';
+      // Get the output value from the correct output column
+      const actualOutput = matchRow && outputColIdx !== -1 ? matchRow[outputColIdx] : (matchRow ? matchRow[columns.length - 1] : 'No match found');
       const pass = tc.expected !== '' ? actualOutput === tc.expected : null;
       return { ...tc, result: actualOutput, status: pass === null ? null : pass ? 'pass' : 'fail' };
     });
@@ -140,7 +257,7 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
 
   // Add new test case
   const addTestCase = () => {
-    setTestCases([...testCases, { inputs: inputColumns.map(() => ''), expected: '', result: null, status: null }]);
+  setTestCases([...testCases, { inputs: inputColumns.map(() => ''), expected: '', result: null, status: null }]);
   };
 
   // Update test case
@@ -274,6 +391,10 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
             <button className="px-3 py-1 bg-green-600 text-white rounded mr-2" onClick={addTestCase}>Add Test Case</button>
             <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={runTestSuite}>Run All Tests</button>
           </div>
+          {/* Show warning if no output column found */}
+          {outputColIdx === -1 && (
+            <div className="mb-2 text-xs text-red-600 font-semibold">Warning: No output column found (Result, Output, or Decision). Last column will be used as output.</div>
+          )}
           <table className="min-w-full border text-sm mb-4">
             <thead>
               <tr>
@@ -1410,6 +1531,7 @@ const InfinityReactUI = () => {
                             : []
                         }
                         onSuggestion={rec => {
+                          console.log('[DEBUG] onSuggestion called with:', rec);
                           if (!rec) return;
                           let recObj = rec;
                           if (typeof recObj === 'string') {
@@ -1417,45 +1539,121 @@ const InfinityReactUI = () => {
                           }
                           if (!recObj) return;
                           const currentModel = modelsForRepo[activeModelIdx];
+                          // Helper: get current input column names
+                          const currentInputColumns = (currentModel.columns || []).slice(0, (currentModel.columns || []).length - 1).map(col => col.name);
+                          // Helper: remap a test case's inputs to current columns
+                          function remapTestCaseInputs(tc, originalColNames) {
+                            // If tc has a 'columnNames' property, use it; else, assume order matches currentInputColumns
+                            const colNames = tc.columnNames || originalColNames || currentInputColumns;
+                            const inputMap = {};
+                            colNames.forEach((name, idx) => {
+                              inputMap[name] = tc.inputs[idx];
+                            });
+                            // Build new inputs array in currentInputColumns order
+                            return currentInputColumns.map(colName => inputMap[colName] !== undefined ? inputMap[colName] : '');
+                          }
+                          // Only update test suite if testCases is present or recObj is a valid test case array
+                          if (Object.prototype.hasOwnProperty.call(recObj, 'testCases')) {
+                            const existing = currentModel.testCases || [];
+                            let incoming = Array.isArray(recObj.testCases) ? recObj.testCases : [recObj.testCases];
+                            // Try to get column names from recObj if present
+                            let originalColNames = recObj.columnNames || null;
+                            // Remap all incoming test cases
+                            incoming = incoming.map(tc => {
+                              // If tc has columnNames, use them; else, try to infer from recObj or assume current
+                              const colNames = tc.columnNames || originalColNames || currentInputColumns;
+                              return {
+                                ...tc,
+                                inputs: remapTestCaseInputs(tc, colNames)
+                              };
+                            });
+                            // Deduplicate by inputs and expected
+                            const merged = [...existing, ...incoming].filter((tc, idx, arr) =>
+                              arr.findIndex(other =>
+                                JSON.stringify(other.inputs) === JSON.stringify(tc.inputs) && other.expected === tc.expected
+                              ) === idx
+                            );
+                            console.log('[DEBUG] Merged & remapped testCases:', merged);
+                            updateModel(activeModelIdx, { testCases: merged });
+                          } else if (Array.isArray(recObj) && recObj.length > 0 && recObj.every(tc => tc && Array.isArray(tc.inputs) && tc.expected !== undefined)) {
+                            const existing = currentModel.testCases || [];
+                            let incoming = recObj;
+                            // Try to get column names from recObj if present
+                            let originalColNames = recObj.columnNames || null;
+                            // Remap all incoming test cases
+                            incoming = incoming.map(tc => {
+                              const colNames = tc.columnNames || originalColNames || currentInputColumns;
+                              return {
+                                ...tc,
+                                inputs: remapTestCaseInputs(tc, colNames)
+                              };
+                            });
+                            // Deduplicate by inputs and expected
+                            const merged = [...existing, ...incoming].filter((tc, idx, arr) =>
+                              arr.findIndex(other =>
+                                JSON.stringify(other.inputs) === JSON.stringify(tc.inputs) && other.expected === tc.expected
+                              ) === idx
+                            );
+                            console.log('[DEBUG] Merged & remapped testCases:', merged);
+                            updateModel(activeModelIdx, { testCases: merged });
+                          }
                           // Only update decision table if columns/rows are present and NOT testCases
-                          if (recObj.columns || recObj.rows) {
+                          else if (recObj.columns || recObj.rows) {
                             let updated = {};
                             if (recObj.columns) {
+                              const outputNames = ['result', 'output', 'decision'];
                               const existingCols = currentModel.columns || [];
                               const recColNames = recObj.columns.map(c => c.name);
                               const existingColNames = existingCols.map(c => c.name);
-                              const isFullReplacement = existingColNames.every((name, idx) => recColNames[idx] === name) && recColNames.length >= existingColNames.length;
-                              if (isFullReplacement) {
-                                updated.columns = recObj.columns;
-                                const newColCount = recObj.columns.length;
-                                updated.rows = (currentModel.rows || []).map(row => {
-                                  const diff = newColCount - row.length;
-                                  return diff > 0 ? [...row, ...Array(diff).fill('')] : row.slice(0, newColCount);
+                              // Find output column index in existing columns
+                              const outputIdx = existingCols.findIndex(col => outputNames.includes(col.name.trim().toLowerCase()));
+                              // Identify net new columns
+                              const newCols = recObj.columns.filter(
+                                col => !existingCols.some(ec => ec.name === col.name)
+                              );
+                              // Insert new columns before output column
+                              let mergedCols;
+                              if (outputIdx === -1) {
+                                mergedCols = [...existingCols, ...newCols];
+                              } else {
+                                mergedCols = [
+                                  ...existingCols.slice(0, outputIdx),
+                                  ...newCols,
+                                  ...existingCols.slice(outputIdx)
+                                ];
+                              }
+                              // Patch: enforce output column always last after merge
+                              // Find output column in mergedCols
+                              const outputColIdx = mergedCols.findIndex(col => outputNames.includes(col.name.trim().toLowerCase()));
+                              if (outputColIdx !== -1) {
+                                const outputCol = mergedCols[outputColIdx];
+                                mergedCols = [
+                                  ...mergedCols.filter((_, idx) => idx !== outputColIdx),
+                                  outputCol
+                                ];
+                              }
+                              updated.columns = mergedCols;
+                              // Build a mapping from recObj column name to its index in recObj.columns
+                              const recColIndex = {};
+                              recObj.columns.forEach((col, idx) => { recColIndex[col.name] = idx; });
+                              // Realign row values to match the new column order
+                              if (recObj.rows && Array.isArray(recObj.rows)) {
+                                updated.rows = recObj.rows.map(row => {
+                                  // Map values from recObj row to new column order
+                                  return mergedCols.map(col => {
+                                    const idx = recColIndex[col.name];
+                                    return idx !== undefined ? row[idx] : '';
+                                  });
                                 });
                               } else {
-                                const newCols = recObj.columns.filter(
-                                  col => !existingCols.some(ec => ec.name === col.name)
-                                );
-                                updated.columns = [...existingCols, ...newCols];
-                                if (newCols.length > 0) {
-                                  const newColCount = updated.columns.length;
-                                  updated.rows = (currentModel.rows || []).map(row => {
-                                    const diff = newColCount - row.length;
-                                    return diff > 0 ? [...row, ...Array(diff).fill('')] : row;
-                                  });
-                                }
+                                // If no rows, preserve existing rows
+                                updated.rows = (currentModel.rows || []).map(row => {
+                                  const diff = mergedCols.length - row.length;
+                                  return diff > 0 ? [...row, ...Array(diff).fill('')] : row;
+                                });
                               }
                             }
-                            if (recObj.rows) {
-                              updated.rows = recObj.rows;
-                            }
                             updateModel(activeModelIdx, updated);
-                            alert('Recommendation applied to the decision table!');
-                          }
-                          // Only update test suite if testCases is present and NOT columns/rows
-                          else if (Object.prototype.hasOwnProperty.call(recObj, 'testCases')) {
-                            updateModel(activeModelIdx, { testCases: recObj.testCases });
-                            alert('Test Suite updated with new test cases!');
                           }
                         }}
                       />
