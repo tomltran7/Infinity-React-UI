@@ -37,7 +37,23 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
     { name: 'Condition 1', type: 'String', condition: 'Equals' },
     { name: 'Result', type: 'String', condition: 'Equals' }
   ]);
-  const [rows, setRows] = useState(initialRows || [['', '']]);
+  // Helper: normalize Boolean columns to 'TRUE'/'FALSE' strings
+  function normalizeBooleanRows(cols, rows) {
+    const boolIndices = cols
+      .map((col, idx) => col.type && col.type.toLowerCase() === 'boolean' ? idx : -1)
+      .filter(idx => idx !== -1);
+    return rows.map(row =>
+      row.map((val, idx) =>
+        boolIndices.includes(idx)
+          ? (val === true ? 'TRUE' : val === false ? 'FALSE' : (typeof val === 'string' ? val.toUpperCase() : val))
+          : val
+      )
+    );
+  }
+
+  const [rawRows, setRows] = useState(initialRows || [['', '']]);
+  // Always normalize Boolean columns for display and logic
+  const rows = normalizeBooleanRows(columns, rawRows);
   const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
   const inputRefs = React.useRef([]);
 
@@ -131,6 +147,8 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
   const colsWithResultLast = ensureResultLast(newCols);
   setColumnsRaw(colsWithResultLast);
   setTestCasesRaw(prevTestCases => realignTestCases(colsWithResultLast, columns, prevTestCases, rows));
+  // Normalize Boolean columns in rows after column change
+  setRows(prevRows => normalizeBooleanRows(colsWithResultLast, prevRows));
   };
 
   // Patch: wrap setTestCases for compatibility
@@ -178,11 +196,11 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
       ...columns.slice(insertIdx)
     ];
     setColumns(newColumns);
-    setRows(rows.map(row => {
+    setRows(prevRows => normalizeBooleanRows(newColumns, prevRows.map(row => {
       const newRow = [...row];
       newRow.splice(insertIdx, 0, '');
       return newRow;
-    }));
+    })));
   };
   const removeColumn = (colIdx) => {
     setColumns(columns.filter((_, idx) => idx !== colIdx));
