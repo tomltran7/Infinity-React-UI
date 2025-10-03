@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 // Simple hash function for strings
 function hashCode(str) {
   let hash = 0, i, chr;
@@ -183,6 +184,18 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
     alert('Work in progress saved!');
   };
 
+  // Drag-and-drop row reordering logic
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    const sourceIdx = result.source.index;
+    const destIdx = result.destination.index;
+    if (sourceIdx === destIdx) return;
+    const newRows = Array.from(rows);
+    const [moved] = newRows.splice(sourceIdx, 1);
+    newRows.splice(destIdx, 0, moved);
+    setRows(newRows);
+  };
+
   // Add/remove/update logic
   const addColumn = () => {
     // Always insert new column before the output column
@@ -332,75 +345,95 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addColumn}>Add Column</button>
         </div>
         <div className="overflow-auto">
-          <table className="min-w-full border text-sm">
-            <thead>
-              <tr>
-                <th className="border p-2 bg-gray-100 w-10 text-center">#</th>
-                {columns.map((col, colIdx) => (
-                  <th key={colIdx} className="border p-2 bg-gray-100">
-                    <div className="flex flex-col items-center justify-center">
-                      <input
-                        className="w-24 border rounded px-1 mb-1 text-center"
-                        value={col.name}
-                        onChange={e => updateColumn(colIdx, 'name', e.target.value)}
-                      />
-                      <div className="flex gap-1 mt-1 justify-center items-center">
-                        <select
-                          className="border rounded px-1 text-center"
-                          value={col.type}
-                          onChange={e => updateColumn(colIdx, 'type', e.target.value)}
-                        >
-                          {DATATYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                        </select>
-                        <select
-                          className="border rounded px-1 text-center"
-                          value={col.condition}
-                          onChange={e => updateColumn(colIdx, 'condition', e.target.value)}
-                        >
-                          {CONDITIONS.map(cond => <option key={cond} value={cond}>{cond}</option>)}
-                        </select>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <table className="min-w-full border text-sm">
+              <thead>
+                <tr>
+                  <th className="border p-2 bg-gray-100 w-10 text-center">#</th>
+                  {columns.map((col, colIdx) => (
+                    <th key={colIdx} className="border p-2 bg-gray-100">
+                      <div className="flex flex-col items-center justify-center">
+                        <input
+                          className="w-24 border rounded px-1 mb-1 text-center"
+                          value={col.name}
+                          onChange={e => updateColumn(colIdx, 'name', e.target.value)}
+                        />
+                        <div className="flex gap-1 mt-1 justify-center items-center">
+                          <select
+                            className="border rounded px-1 text-center"
+                            value={col.type}
+                            onChange={e => updateColumn(colIdx, 'type', e.target.value)}
+                          >
+                            {DATATYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                          </select>
+                          <select
+                            className="border rounded px-1 text-center"
+                            value={col.condition}
+                            onChange={e => updateColumn(colIdx, 'condition', e.target.value)}
+                          >
+                            {CONDITIONS.map(cond => <option key={cond} value={cond}>{cond}</option>)}
+                          </select>
+                        </div>
+                        <button className="mt-1 text-xs text-red-500" onClick={() => removeColumn(colIdx)}>Remove</button>
                       </div>
-                      <button className="mt-1 text-xs text-red-500" onClick={() => removeColumn(colIdx)}>Remove</button>
-                    </div>
-                  </th>
-                ))}
-                <th className="border p-2 bg-gray-100">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, rowIdx) => (
-                <tr key={rowIdx}>
-                  <td className="border p-2 text-center bg-gray-50 font-semibold">{rowIdx + 1}</td>
-                  {row.map((cell, colIdx) => (
-                    <td key={colIdx} className={`border p-2 ${selectedCell.row === rowIdx && selectedCell.col === colIdx ? 'bg-blue-100 ring-2 ring-blue-400' : ''}`}
-                        onClick={() => {
-                          setSelectedCell({ row: rowIdx, col: colIdx });
-                          setTimeout(() => {
-                            if (inputRefs.current[rowIdx] && inputRefs.current[rowIdx][colIdx]) {
-                              inputRefs.current[rowIdx][colIdx].focus();
-                            }
-                          }, 0);
-                        }}>
-                      <input
-                        ref={el => {
-                          if (!inputRefs.current[rowIdx]) inputRefs.current[rowIdx] = [];
-                          inputRefs.current[rowIdx][colIdx] = el;
-                        }}
-                        className="w-full border rounded px-1 bg-transparent focus:bg-white"
-                        value={cell}
-                        onChange={e => updateCell(rowIdx, colIdx, e.target.value)}
-                        onKeyDown={e => handleCellKeyDown(e, rowIdx, colIdx)}
-                        onFocus={() => setSelectedCell({ row: rowIdx, col: colIdx })}
-                      />
-                    </td>
+                    </th>
                   ))}
-                  <td className="border p-2">
-                    <button className="text-xs text-red-500" onClick={() => removeRow(rowIdx)}>Remove</button>
-                  </td>
+                  <th className="border p-2 bg-gray-100">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <Droppable droppableId="decision-table-rows">
+                {(provided) => (
+                  <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                    {rows.map((row, rowIdx) => (
+                      <Draggable key={rowIdx} draggableId={`row-${rowIdx}`} index={rowIdx}>
+                        {(draggableProvided, snapshot) => (
+                          <tr
+                            ref={draggableProvided.innerRef}
+                            {...draggableProvided.draggableProps}
+                            style={{
+                              ...draggableProvided.draggableProps.style,
+                              background: snapshot.isDragging ? '#e0e7ff' : undefined
+                            }}
+                          >
+                            <td className="border p-2 text-center bg-gray-50 font-semibold" {...draggableProvided.dragHandleProps}>
+                              {rowIdx + 1}
+                            </td>
+                            {row.map((cell, colIdx) => (
+                              <td key={colIdx} className={`border p-2 ${selectedCell.row === rowIdx && selectedCell.col === colIdx ? 'bg-blue-100 ring-2 ring-blue-400' : ''}`}
+                                  onClick={() => {
+                                    setSelectedCell({ row: rowIdx, col: colIdx });
+                                    setTimeout(() => {
+                                      if (inputRefs.current[rowIdx] && inputRefs.current[rowIdx][colIdx]) {
+                                        inputRefs.current[rowIdx][colIdx].focus();
+                                      }
+                                    }, 0);
+                                  }}>
+                                <input
+                                  ref={el => {
+                                    if (!inputRefs.current[rowIdx]) inputRefs.current[rowIdx] = [];
+                                    inputRefs.current[rowIdx][colIdx] = el;
+                                  }}
+                                  className="w-full border rounded px-1 bg-transparent focus:bg-white"
+                                  value={cell}
+                                  onChange={e => updateCell(rowIdx, colIdx, e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, rowIdx, colIdx)}
+                                  onFocus={() => setSelectedCell({ row: rowIdx, col: colIdx })}
+                                />
+                              </td>
+                            ))}
+                            <td className="border p-2">
+                              <button className="text-xs text-red-500" onClick={() => removeRow(rowIdx)}>Remove</button>
+                            </td>
+                          </tr>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </tbody>
+                )}
+              </Droppable>
+            </table>
+          </DragDropContext>
         </div>
         {/* Enhanced Testing Area */}
         <div className="mt-8 border-t pt-6">
@@ -416,6 +449,7 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
           <table className="min-w-full border text-sm mb-4">
             <thead>
               <tr>
+                <th className="border p-2 bg-gray-100 w-10 text-center">#</th>
                 {inputColumns.map((col, i) => (
                   <th key={col.name} className="border p-2 bg-gray-100">{col.name}</th>
                 ))}
@@ -428,6 +462,7 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
             <tbody>
               {testCases.map((tc, idx) => (
                 <tr key={idx}>
+                  <td className="border p-2 text-center bg-gray-50 font-semibold">{idx + 1}</td>
                   {inputColumns.map((col, inputIdx) => (
                     <td key={col.name} className="border p-2">
                       <input
