@@ -91,9 +91,6 @@ export default function PeerReviewActivityTracker() {
           <Button className="flex items-center gap-2" onClick={() => window.location.reload()}>
             <RefreshCw size={16} className="mr-1" /> <span>Refresh</span>
           </Button>
-          <Button className="flex items-center gap-2">
-            <LogOut size={16} className="mr-1" /> <span>Logout</span>
-          </Button>
         </div>
       </header>
 
