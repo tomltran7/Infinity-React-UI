@@ -1,7 +1,9 @@
 // server/copilot.js
+
 import express from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
+import tokenManager from './tokenManager.js';
 
 
 const app = express();
@@ -23,7 +25,7 @@ app.post('/api/copilot', async (req, res) => {
       , {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.HORIZON_HUB_ACCESS_TOKEN}`,
+  'Authorization': `Bearer ${tokenManager.getToken()}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
