@@ -302,7 +302,7 @@ const InfinityAssistant = ({ onSuggestion, isMinimized, setIsMinimized, modelDec
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-75"></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
-                <span className="text-sm text-gray-600 ml-2">Assistant is thinking...</span>
+                <span className="text-sm text-gray-600 ml-2">Noodling...</span>
               </div>
             </div>
           )}
