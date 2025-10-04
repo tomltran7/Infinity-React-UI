@@ -22,7 +22,7 @@ import InfinityIcon from '../assets/infinity.svg';
 import { 
   ChevronDown, Plus, RefreshCw, GitBranch, GitCommit, Clock, 
   FileText, FolderOpen, Settings, User, Search, X, AlertCircle, 
-  GitPullRequest, Download, Upload, Home, BarChart2 
+  GitPullRequest, Download, Upload, Home, Layout, Table, PanelRight, PanelBottom, Play, Trash2, BarChart2 
 } from 'lucide-react';
 
 
@@ -341,8 +341,22 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
         </div>
         <p className="text-gray-600 mb-4">Create and edit workflows for models using a decision table interface.</p>
         <div className="mb-2 flex gap-2">
-          <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addRow}>Add Row</button>
-          <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={addColumn}>Add Column</button>
+          <button
+            className="p-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center relative"
+            onClick={addRow}
+            title="Add Row"
+          >
+            <PanelBottom className="w-5 h-5" />
+            <Plus className="w-3 h-3 absolute right-1 top-1 text-green-500" />
+          </button>
+          <button
+            className="p-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center relative"
+            onClick={addColumn}
+            title="Add Column"
+          >
+            <PanelRight className="w-5 h-5" />
+            <Plus className="w-3 h-3 absolute right-1 top-1 text-green-500" />
+          </button>
         </div>
         <div className="overflow-auto">
           <DragDropContext onDragEnd={onDragEnd}>
@@ -439,8 +453,23 @@ const DecisionTableIDE = ({ title: initialTitle, columns: initialColumns, rows: 
         <div className="mt-8 border-t pt-6">
           <h3 className="text-md font-semibold mb-2">Decision Table Test Suite</h3>
           <div className="mb-4">
-            <button className="px-3 py-1 bg-green-600 text-white rounded mr-2" onClick={addTestCase}>Add Test Case</button>
-            <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={runTestSuite}>Run All Tests</button>
+            <div className="flex flex-row gap-2">
+              <button
+                className="p-2 bg-gray-200 text-gray-700 rounded flex items-center justify-center relative hover:bg-gray-300"
+                onClick={addTestCase}
+                title="Add Test Case"
+              >
+                <FileText className="w-5 h-5" />
+                <Plus className="w-3 h-3 absolute right-1 top-1 text-green-500" />
+              </button>
+              <button
+                className="p-2 bg-gray-200 text-gray-700 rounded flex items-center justify-center hover:bg-gray-300"
+                onClick={runTestSuite}
+                title="Run All Tests"
+              >
+                <Play className="w-5 h-5" />
+              </button>
+            </div>
           </div>
           {/* Show warning if no output column found */}
           {outputColIdx === -1 && (
@@ -769,7 +798,7 @@ const InfinityReactUI = () => {
   const MAX_CHAT_WIDTH = 600; // px
   const [chatPanelWidth, setChatPanelWidth] = useState(() => {
     if (typeof window !== 'undefined' && window._infinityChatPanelWidth) return window._infinityChatPanelWidth;
-    return 384; // default 24rem (w-96)
+    return 600; // default to 600px
   });
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
@@ -1119,6 +1148,9 @@ const InfinityReactUI = () => {
     setCopilotInput("");
   };
 
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  // Sidebar double click handler
+  const handleSidebarDoubleClick = () => setIsSidebarMinimized(min => !min);
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans">
       {/* Title Bar */}
@@ -1140,135 +1172,178 @@ const InfinityReactUI = () => {
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <div className="w-64 bg-gray-100 border-r border-gray-200 flex flex-col">
-          {/* Repository Selector */}
-          <div className="p-3 border-b border-gray-200 relative repo-dropdown">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Current Repository
-              </span>
-              <Plus className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => setShowAddRepo(show => !show)} />
-            </div>
-            <button
-              className="w-full flex items-center justify-between p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-              onClick={() => setRepoDropdownOpen((open) => !open)}
-              aria-haspopup="listbox"
-              aria-expanded={repoDropdownOpen}
-            >
-              <div className="flex items-center space-x-2">
-                <FolderOpen className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-800 truncate max-w-[160px]" title={selectedRepo}>{selectedRepo}</span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${repoDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {showAddRepo && (
-              <div className="mt-2 flex space-x-2">
-                <input
-                  type="text"
-                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  placeholder="New repository name"
-                  value={newRepoName}
-                  onChange={e => setNewRepoName(e.target.value)}
-                />
-                <button
-                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                  disabled={!newRepoName.trim() || repoList.includes(newRepoName.trim())}
-                  onClick={() => {
-                    const name = newRepoName.trim();
-                    if (name && !repoList.includes(name)) {
-                      setRepoList(list => [...list, name]);
-                      setSelectedRepo(name);
-                      setShowAddRepo(false);
-                      setNewRepoName('');
-                    }
-                  }}
-                >
-                  Add Repository
-                </button>
-              </div>
-            )}
-            {repoDropdownOpen && (
-              <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-80 overflow-auto">
-                <div className="p-3 border-b border-gray-100">
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search repositories..."
-                      value={repoSearchQuery}
-                      onChange={e => setRepoSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+        <div
+          className={isSidebarMinimized ? "w-16 bg-gray-100 border-r border-gray-200 flex flex-col items-center justify-start transition-all duration-200" : "w-64 bg-gray-100 border-r border-gray-200 flex flex-col transition-all duration-200"}
+          onDoubleClick={handleSidebarDoubleClick}
+          style={{ cursor: 'pointer' }}
+        >
+          {/* Repository Selector (Minimized: Only Icon) */}
+          {/* Only render sidebar buttons below, not here, to avoid duplication */}
+          {false ? (
+            <div />
+          ) : (
+            <>
+              {/* Repository Selector - Show folder icon only when minimized, full UI when maximized */}
+              {isSidebarMinimized ? (
+                <div className="flex items-center justify-center py-4 border-b border-gray-200">
+                  <FolderOpen className="w-7 h-7 text-gray-500" title="Repositories" />
                 </div>
-                <div className="py-1">
-                  {filteredRepos.map((repo) => (
-                    <button
-                      key={repo}
-                      className={`w-full text-left px-4 py-2 hover:bg-blue-50 flex items-center space-x-2 ${repo === selectedRepo ? 'bg-blue-100 font-semibold' : ''}`}
-                      onClick={() => {
-                        setSelectedRepo(repo);
-                        setRepoDropdownOpen(false);
-                        setRepoSearchQuery('');
-                      }}
-                    >
+              ) : (
+                <div className="p-3 border-b border-gray-200 relative repo-dropdown">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Current Repository
+                    </span>
+                    <Plus className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => setShowAddRepo(show => !show)} />
+                  </div>
+                  <button
+                    className="w-full flex items-center justify-between p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                    onClick={() => setRepoDropdownOpen((open) => !open)}
+                    aria-haspopup="listbox"
+                    aria-expanded={repoDropdownOpen}
+                  >
+                    <div className="flex items-center space-x-2">
                       <FolderOpen className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-800 truncate max-w-[160px]" title={repo}>{repo}</span>
-                    </button>
-                  ))}
-                  {filteredRepos.length === 0 && (
-                    <div className="px-4 py-2 text-gray-500">No repositories found.</div>
+                      <span className="text-sm font-medium text-gray-800 truncate max-w-[160px]" title={selectedRepo}>{selectedRepo}</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${repoDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showAddRepo && (
+                    <div className="mt-2 flex space-x-2">
+                      <input
+                        type="text"
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                        placeholder="New repository name"
+                        value={newRepoName}
+                        onChange={e => setNewRepoName(e.target.value)}
+                      />
+                      <button
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                        disabled={!newRepoName.trim() || repoList.includes(newRepoName.trim())}
+                        onClick={() => {
+                          const name = newRepoName.trim();
+                          if (name && !repoList.includes(name)) {
+                            setRepoList(list => [...list, name]);
+                            setSelectedRepo(name);
+                            setShowAddRepo(false);
+                            setNewRepoName('');
+                          }
+                        }}
+                      >
+                        Add Repository
+                      </button>
+                    </div>
+                  )}
+                  {repoDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-80 overflow-auto">
+                      <div className="p-3 border-b border-gray-100">
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                          <input
+                            type="text"
+                            placeholder="Search repositories..."
+                            value={repoSearchQuery}
+                            onChange={e => setRepoSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="py-1">
+                        {filteredRepos.map((repo) => (
+                          <button
+                            key={repo}
+                            className={`w-full text-left px-4 py-2 hover:bg-blue-50 flex items-center space-x-2 ${repo === selectedRepo ? 'bg-blue-100 font-semibold' : ''}`}
+                            onClick={() => {
+                              setSelectedRepo(repo);
+                              setRepoDropdownOpen(false);
+                              setRepoSearchQuery('');
+                            }}
+                          >
+                            <FolderOpen className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-800 truncate max-w-[160px]" title={repo}>{repo}</span>
+                          </button>
+                        ))}
+                        {filteredRepos.length === 0 && (
+                          <div className="px-4 py-2 text-gray-500">No repositories found.</div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+              {/* Branch Selector, Actions, etc. (existing code) */}
+              {/* ...existing sidebar code... */}
+            </>
+          )}
 
-          {/* Branch Selector */}
-          <div className="p-3 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Current Branch
-              </span>
-              <GitBranch className="w-4 h-4 text-gray-400" />
+          {/* Branch Selector & Actions */}
+          {isSidebarMinimized ? (
+            <div className="flex flex-col items-center gap-6 py-2">
+              <button className="p-0 bg-transparent border-none" title="Branch">
+                <GitBranch className="w-7 h-7 text-gray-500" />
+              </button>
+              <button className="p-0 bg-transparent border-none" title="Home" onClick={() => setActivePage('home')}>
+                <Home className="w-7 h-7 text-gray-500" />
+              </button>
+              <button className="p-0 bg-transparent border-none" title="Peer Review" onClick={() => setActivePage('peerReview')}>
+                <GitPullRequest className="w-7 h-7 text-gray-500" />
+              </button>
+              <button className="p-0 bg-transparent border-none" title="Bitbucket">
+                <RefreshCw className="w-7 h-7 text-gray-500" />
+              </button>
+              <button className="p-0 bg-transparent border-none" title="Insights" onClick={() => setActivePage('reporting')}>
+                <BarChart2 className="w-7 h-7 text-gray-500" />
+              </button>
             </div>
-            <button className="w-full flex items-center justify-between p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50">
-              <div className="flex items-center space-x-2">
-                <GitBranch className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-800">{currentBranch}</span>
+          ) : (
+            <>
+              {/* Branch Selector */}
+              <div className="p-3 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Current Branch
+                  </span>
+                  <GitBranch className="w-4 h-4 text-gray-400" />
+                </div>
+                <button className="w-full flex items-center justify-between p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50">
+                  <div className="flex items-center space-x-2">
+                    <GitBranch className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-800">{currentBranch}</span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
               </div>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
 
-          {/* Actions */}
-          <div className="p-3 space-y-2">
-            <button
-              className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
-              onClick={() => setActivePage('home')}
-            >
-              <Home className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">Home</span>
-            </button>
-            <button
-              className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
-              onClick={() => setActivePage('peerReview')}
-            >
-              <GitPullRequest className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">View PRs</span>
-            </button>
-            <button className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md">
-              <RefreshCw className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">View on Bitbucket</span>
-            </button>
-            <button
-              className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
-              onClick={() => setActivePage('reporting')}
-            >
-              <BarChart2 className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">Insights</span>
-            </button>
-          </div>
+              {/* Actions */}
+              <div className="p-3 space-y-2">
+                <button
+                  className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
+                  onClick={() => setActivePage('home')}
+                >
+                  <Home className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">Home</span>
+                </button>
+                <button
+                  className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
+                  onClick={() => setActivePage('peerReview')}
+                >
+                  <GitPullRequest className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">View PRs</span>
+                </button>
+                <button className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md">
+                  <RefreshCw className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">View on Bitbucket</span>
+                </button>
+                <button
+                  className="w-full flex items-center space-x-2 p-2 text-left hover:bg-gray-200 rounded-md"
+                  onClick={() => setActivePage('reporting')}
+                >
+                  <BarChart2 className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">Insights</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Main Content */}
@@ -1484,17 +1559,19 @@ const InfinityReactUI = () => {
                           ))}
                         </select>
                         <button
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                          className="p-2 bg-gray-200 text-gray-700 rounded flex items-center justify-center hover:bg-gray-300"
                           onClick={addModel}
+                          title="Add Model"
                         >
-                          Add Model
+                          <Plus className="w-5 h-5" />
                         </button>
                         <button
-                          className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+                          className="p-2 bg-gray-200 text-gray-700 rounded flex items-center justify-center hover:bg-gray-300"
                           onClick={destroyModel}
                           disabled={modelsForRepo.length <= 1}
+                          title="Destroy Model"
                         >
-                          Destroy Model
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     )}
