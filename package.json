@@ -1,9 +1,6 @@
 {
   "name": "infinity-react-ui",
-<<<<<<< HEAD
   "homepage": "https://github.com/tomltran7.github.io/Infinity-React-UI",
-=======
->>>>>>> demo
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,19 +13,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hello-pangea/dnd": "^18.0.1",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "lucide-react": "^0.544.0",
-<<<<<<< HEAD
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-=======
-    "node-fetch": "^3.3.2",
-    "openai": "^6.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
->>>>>>> demo
+  "@hello-pangea/dnd": "^18.0.1",
+  "dotenv": "^17.2.3",
+  "express": "^5.1.0",
+  "lucide-react": "^0.544.0",
+  "node-fetch": "^3.3.2",
+  "openai": "^6.0.0",
+  "react": "^19.2.0",
+  "react-dom": "^19.2.0",
     "recharts": "^3.2.1"
   },
   "devDependencies": {
